@@ -51,9 +51,9 @@ def cluster_data(id):
     for i in id:
         for row in clust_m:
             if len(row)>0 and row[0]==i: #and len(row)>=7: #length of the row is 9 elements, just preventive
-            #id of met, name, number of cluster, centre of cluster, width of cluster 
-                total_clusters.append([i, mets_m[i-1,1],mets_m[i-1,4], row[6], row[8]])
-    
+            #id of met, name, number of clusters, concentration, centre of cluster, width of cluster 
+                total_clusters.append([i, mets_m[i-1,1],mets_m[i-1,4], mets_m[i-1,5], row[6], row[8]])
+
         # indexes = clust_m[:,0]#we could avoid this step and store the whole row into f, but maybe to messy
         # f = np. where(indexes == i)[0] #This [0] makes an array
     
@@ -76,20 +76,32 @@ def cluster_data(id):
 # my_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
 # print("The index of element C is ", my_list.index('C'))
 
-
-
+def peaks_data(id):
+    #id=[3]
+    total_peaks = []
+    for i in id:
+        for row in peaks_m:
+            if len(row)>0 and row[0]==i:
+                                    #id, name of met, cluster number, peak number, centre, width 
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], row[4]])
+    
+    return total_peaks
+#TODO, add ranges and use them for the movement of the clusters
 
 if __name__ == "__main__":
     
     #Store the data from the matrixes in a variable
     input_met = [3,4]
-    w = cluster_data(input_met)
+    w = cluster_data(input_met)#Make a plot of clusts function
+    v = peaks_data(input_met) #Make a plot of peaks funct
     
-    for met in w:
+    #Make a function for plotting where input is v or w 
+    #Plot both??
+    for met in v:
         # Set the centre and the width for plotting
         name = met[1]
-        x0= met[3]
-        gamma= 0.02 #met[4] because i dont have the info of many cluster 
+        x0= met[4]
+        gamma= met[5] #0.02 #met[4] because i dont have the info of many cluster 
         print('Your metabolite:', name, '\n', 'with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the following graph:')
         #TODO: apply same color to the clusters of the same metabolite
         x = np.linspace(0, 10, 1000)

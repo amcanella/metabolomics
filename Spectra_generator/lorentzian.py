@@ -28,5 +28,5 @@ y = loren(x,x0,gamma)
 
 #plot the curve 
 
-plt.plot(x,y)
-plt.show()
+# plt.plot(x,y)
+# plt.show()
