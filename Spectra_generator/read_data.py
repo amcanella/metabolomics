@@ -10,7 +10,7 @@ import pandas as pd
 # matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt 
 import lorentzian
-
+from collections import defaultdict
 # path = 'C:/txts/peaks_table.txt'
 path = 'C:/txts/Copia de Metabo_tables_3.xlsx'
 # NO SE PUEDE COGER DE UN EXCEL CON AUTOGUARDADO!!
@@ -88,30 +88,53 @@ def peaks_data(id):
     return total_peaks
 #TODO, add ranges and use them for the movement of the clusters
 
+
 if __name__ == "__main__":
     
     #Store the data from the matrixes in a variable
-    input_met = [3,4]
+    input_met = [3,4,5]
     w = cluster_data(input_met)#Make a plot of clusts function
     v = peaks_data(input_met) #Make a plot of peaks funct
+    #Define dictionary to arrange the peaks of each cluster
+    groups_data = defaultdict(list)
     
+    for row in v:
+        #See why the int data in peaks_m gets stored as float in v 
+        key = row[2]
+        groups_data[key].append(row)
+        # if key in groups_data:
+        #     groups_data[key].append(row)
+        # else:
+        #     groups_data[key] = [row]
+            
     #Make a function for plotting where input is v or w 
     #Plot both??
+    #Init the store single set of figure and axes, ax allows to invert the axes later
+    fig, ax = plt.subplots()
+    name=0
+    i=1
     for met in v:
+        
         # Set the centre and the width for plotting
+        if met[1]==name:
+            i+=1
+        else:
+           print('\n','Your metabolite:', met[1], '\n')
+           i=1
         name = met[1]
         x0= met[4]
         gamma= met[5] #0.02 #met[4] because i dont have the info of many cluster 
-        print('Your metabolite:', name, '\n', 'with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the following graph:')
+        print('Peak', i,' With a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the graph below.')
         #TODO: apply same color to the clusters of the same metabolite
         x = np.linspace(0, 10, 1000)
         y = lorentzian.loren(x,x0,gamma)
     
-        plt.plot(x,y)
+        ax.plot(x,y)
         
-    plt.xlabel('ppm')
-    plt.title('Plot of clusters')
-    plt.grid(True)
+    ax.invert_xaxis() 
+    ax.set_xlabel('ppm')
+    ax.set_title('Plot of clusters')
+    ax.grid(True)
     plt.show()
     
     
