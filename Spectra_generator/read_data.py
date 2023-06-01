@@ -92,16 +92,51 @@ def peaks_data(id):
 if __name__ == "__main__":
     
     #Store the data from the matrixes in a variable
-    input_met = [3,4,5]
+    input_met = [3,5]
     w = cluster_data(input_met)#Make a plot of clusts function
-    v = peaks_data(input_met) #Make a plot of peaks funct
+    v = peaks_data(input_met) #Collects the info from the peaks 
     #Define dictionary to arrange the peaks of each cluster
-    groups_data = defaultdict(list)
-    
+    # groups_data = defaultdict(list)
+    groups_data = {}
+    # ---------------------------------------------------
+    #It makes more sense to go through the row once and classify directly
+    #than going through the different ids and run v for every id there is 
+    # for key in input_met:
+    # --------------------------------------------------
+        
     for row in v:
+        key = row[0]
+        key_2 = int(row[2])
+        if key not in groups_data:
+            inner_dict = {}
+            groups_data[key]=inner_dict
+        if key_2 not in inner_dict:
+            groups_data[key][key_2]=[row]
+        else:
+            groups_data[key][key_2].append(row)
+        
+    # rr = list(groups_data.items()) 
+        
+        # if key_2 not in groups_data[key]:
+        #     groups_data[key][key_2]=[]
+        # groups_data[key][key_2].append(row)
+    
+    # for row in v:
+    #     key_2 = row[2]
+    # With defaultdict
+    # for row in v:
+        
+    #     #Append first the 
+    #     key = row[0]
+    #     groups_data[key].append(row)
+        
+    # keys = list(dict.keys(groups_data))
+        # groups_data[key].append(row)
+        #TO add the groups_data[1][-1][0]
         #See why the int data in peaks_m gets stored as float in v 
-        key = row[2]
-        groups_data[key].append(row)
+    # for row in groups_data:
+    #     key = row[2]
+    #     groups_data[key].append(row)
         # if key in groups_data:
         #     groups_data[key].append(row)
         # else:
@@ -112,29 +147,32 @@ if __name__ == "__main__":
     #Init the store single set of figure and axes, ax allows to invert the axes later
     fig, ax = plt.subplots()
     name=0
-    i=1
+    count=1
     for met in v:
         
         # Set the centre and the width for plotting
         if met[1]==name:
-            i+=1
+            count+=1
         else:
            print('\n','Your metabolite:', met[1], '\n')
-           i=1
+           count=1
         name = met[1]
         x0= met[4]
         gamma= met[5] #0.02 #met[4] because i dont have the info of many cluster 
-        print('Peak', i,' With a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the graph below.')
+        print('Peak', count,' With a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the graph below.')
         #TODO: apply same color to the clusters of the same metabolite
         x = np.linspace(0, 10, 1000)
         y = lorentzian.loren(x,x0,gamma)
-    
-        ax.plot(x,y)
-        
+        if count==1:
+            ax.plot(x,y, label='${name}$'.format(name=name))
+        else:
+            ax.plot(x,y)   
+    plt.plot()    
     ax.invert_xaxis() 
     ax.set_xlabel('ppm')
-    ax.set_title('Plot of clusters')
+    ax.set_title('Plot of peaks')
     ax.grid(True)
+    plt.legend(loc='best')
     plt.show()
     
     
