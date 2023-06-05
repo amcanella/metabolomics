@@ -9,6 +9,7 @@ import pandas as pd
 # import matplotlib
 # matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt 
+import matplotlib.colors 
 import lorentzian
 from collections import defaultdict
 # path = 'C:/txts/peaks_table.txt'
@@ -73,9 +74,7 @@ def cluster_data(id):
 # clusterss = mets[:,1]
 # peaksss = mets[:, 2:7]
 
-# my_list = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
-# print("The index of element C is ", my_list.index('C'))
-
+#Collects the peaks information
 def peaks_data(id):
     #id=[3]
     total_peaks = []
@@ -103,7 +102,10 @@ if __name__ == "__main__":
     #than going through the different ids and run v for every id there is 
     # for key in input_met:
     # --------------------------------------------------
-        
+    #Make a dict with two level, upper label is the metabolite number 
+    #and the second level is the number of cluster
+    #this way we can print cluster by cluster 
+    
     for row in v:
         key = row[0]
         key_2 = int(row[2])
@@ -141,38 +143,88 @@ if __name__ == "__main__":
         #     groups_data[key].append(row)
         # else:
         #     groups_data[key] = [row]
-            
+    
+    name = 0  
+    # custom_cmap = matplotlib.colors.ListedColormap(['red','yellow','blue'])
+    # color = ['b','b','g','o','p','y','bl','w']
+    c = 0
+    #NEW PLOT PROCEDURE WITH THE DICT 
+    for key,value in groups_data.items():
+        for key_cluster, list_peaks in value.items():
+            for row in list_peaks:
+                if name == row[1]:
+                    c +=1
+                #     color = color[c]
+                    
+                else:
+                    print('\n','Your metabolite:', row[1], '\n')
+                    c=1
+                #     color = color[c]
+                    
+                name = row[1]
+                x0 = row[4]
+                gamma=row[5]
+                print('Peak', c,' with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm ')
+                x = np.linspace(0, 10, 1000)
+                y = lorentzian.loren(x,x0,gamma)
+                plt.plot(x,y, label=(name, c) ) #'${name}$'.format(name=name))
+    plt.gca().invert_xaxis()
+    plt.xlabel('ppm')
+    plt.title('Peaks ')
+    plt.grid(True)
+    plt.legend(loc='upper left') #'best', 'center right'
+    plt.show()
     #Make a function for plotting where input is v or w 
     #Plot both??
     #Init the store single set of figure and axes, ax allows to invert the axes later
-    fig, ax = plt.subplots()
-    name=0
-    count=1
-    for met in v:
+    # fig is used to store the actual graph inside it and ax for the axes class
+    # fig, ax = plt.plot()
+    
+    # "'
+    # name=0
+    # count=1
+    # with plt.ion():
+    #     fig = plt.figure()
+    # for met in v:
         
-        # Set the centre and the width for plotting
-        if met[1]==name:
-            count+=1
-        else:
-           print('\n','Your metabolite:', met[1], '\n')
-           count=1
-        name = met[1]
-        x0= met[4]
-        gamma= met[5] #0.02 #met[4] because i dont have the info of many cluster 
-        print('Peak', count,' With a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the graph below.')
-        #TODO: apply same color to the clusters of the same metabolite
-        x = np.linspace(0, 10, 1000)
-        y = lorentzian.loren(x,x0,gamma)
-        if count==1:
-            ax.plot(x,y, label='${name}$'.format(name=name))
-        else:
-            ax.plot(x,y)   
-    plt.plot()    
-    ax.invert_xaxis() 
-    ax.set_xlabel('ppm')
-    ax.set_title('Plot of peaks')
-    ax.grid(True)
-    plt.legend(loc='best')
-    plt.show()
+    #     # Set the centre and the width for plotting
+    #     if met[1]==name:
+    #         count+=1
+    #     else:
+    #        print('\n','Your metabolite:', met[1], '\n')
+    #        count=1
+    #     name = met[1]
+    #     x0= met[4]
+    #     gamma= met[5] #0.02 #met[4] because i dont have the info of many cluster 
+    #     print('Peak', count,' With a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the graph below.')
+    #     #TODO: apply same color to the clusters of the same metabolite
+    #     x = np.linspace(0, 10, 1000)
+    #     y = lorentzian.loren(x,x0,gamma)
+    #     if count==1:
+    #         plt.plot(x,y, label= name) #'${name}$'.format(name=name))
+    #     else:
+    #         plt.plot(x,y)
+    #     plt.gca().invert_xaxis()
+    #     plt.xlabel('ppm')
+    #     plt.title('Peaks ')
+    #     # plt.pause(2)
+    #     # plt.show()
+    
+    # plt.gca().invert_xaxis()
+    # plt.xlabel('ppm')
+    # plt.title('Peaks ')
+    # plt.grid(True)
+    # plt.legend(loc='best')
+    # plt.show()
+    
+    # "'
+    
+    # ax.plot()    
+    # ax.invert_xaxis() 
+    # ax.set_xlabel('ppm')
+    # ax.set_title('Plot of peaks')
+    # ax.grid(True)
+    # plt.legend(loc='best')
+    # plt.show()
     
     
