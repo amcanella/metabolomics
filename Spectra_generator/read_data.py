@@ -91,7 +91,7 @@ def peaks_data(id):
 if __name__ == "__main__":
     
     #Store the data from the matrixes in a variable
-    input_met = [3,5]
+    input_met = [3,4,5]
     w = cluster_data(input_met)#Make a plot of clusts function
     v = peaks_data(input_met) #Collects the info from the peaks 
     #Define dictionary to arrange the peaks of each cluster
@@ -134,7 +134,7 @@ if __name__ == "__main__":
         
     # keys = list(dict.keys(groups_data))
         # groups_data[key].append(row)
-        #TO add the groups_data[1][-1][0]
+            #TO add the groups_data[1][-1][0]
         #See why the int data in peaks_m gets stored as float in v 
     # for row in groups_data:
     #     key = row[2]
@@ -143,37 +143,102 @@ if __name__ == "__main__":
         #     groups_data[key].append(row)
         # else:
         #     groups_data[key] = [row]
-    
+        
+        
+    # def plot_fig(row):
+        
+    #     name = row[1]
+    #     x0 = row[4]
+    #     gamma=row[5]
+    #     print('Peak', c,' with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm ')
+    #     x = np.linspace(0, 10, 1000)
+    #     y = lorentzian.loren(x,x0,gamma)
+        
+    #     return plt.plot(x,y, label=(name, c) )
+    # NEW PLOT TO PLOT CLUSTERS
     name = 0  
-    # custom_cmap = matplotlib.colors.ListedColormap(['red','yellow','blue'])
-    # color = ['b','b','g','o','p','y','bl','w']
-    c = 0
-    #NEW PLOT PROCEDURE WITH THE DICT 
-    for key,value in groups_data.items():
-        for key_cluster, list_peaks in value.items():
-            for row in list_peaks:
-                if name == row[1]:
-                    c +=1
-                #     color = color[c]
-                    
-                else:
-                    print('\n','Your metabolite:', row[1], '\n')
-                    c=1
-                #     color = color[c]
-                    
+    c = 0 #COUNTER TO NOT PLOT THE FIRST PEAK AND WAIT FOR WHOLE CLUSTER 
+    clusterr=0
+    idd=0
+    s=0
+    
+    for key,value in groups_data.items():#each met
+        for key_cluster, list_peaks in value.items():#each cluster
+            for row in list_peaks:#inside the cluster
+                
                 name = row[1]
                 x0 = row[4]
                 gamma=row[5]
-                print('Peak', c,' with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm ')
                 x = np.linspace(0, 10, 1000)
-                y = lorentzian.loren(x,x0,gamma)
-                plt.plot(x,y, label=(name, c) ) #'${name}$'.format(name=name))
-    plt.gca().invert_xaxis()
-    plt.xlabel('ppm')
-    plt.title('Peaks ')
-    plt.grid(True)
-    plt.legend(loc='upper left') #'best', 'center right'
-    plt.show()
+                #Add the correction factor for the centre and Hs for every cluster 
+                if row[0]==idd and row[2]==clusterr:
+                    
+                    # Might work directly by writting in y, y+=?, no need of suma function?
+                    y = lorentzian.loren(x,x0,gamma)
+                    s = lorentzian.suma(s,y)
+                    c+=1 
+                    # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
+                else:
+                    # if c>0:
+                    #     plt.plot(x,s, label=(name, row[2]))
+                    
+                    #New metabolite begins
+                    print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
+                    y = lorentzian.loren(x,x0,gamma)
+                    s=y
+                    c=1
+                print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
+                idd=row[0]
+                clusterr=row[2] 
+                #Como saber cual es el final del cluster 
+                # plt.plot(x,s, label=(name, row[2]))
+            plt.plot(x,s, label=(name, row[2]))
+        plt.gca().invert_xaxis()
+        plt.xlabel('ppm')
+        plt.title('Clusters ')
+        plt.grid(True)
+        plt.legend(loc='upper left') #'best', 'center right'
+        plt.show()
+        
+        
+# # ----------------------------------------------------------------------
+    # # |If you want to plot all peaks      
+    # def plot_peaks(groups_data):
+    #     name = 0  
+    #     # custom_cmap = matplotlib.colors.ListedColormap(['red','yellow','blue'])
+    #     # color = ['b','b','g','o','p','y','bl','w']
+    #     c = 0
+    #     fig, ax = plt.subplots()
+    #     #NEW PLOT PROCEDURE WITH THE DICT TO PLOT PEAKS
+    #     for key,value in groups_data.items():
+    #         for key_cluster, list_peaks in value.items():
+    #             for row in list_peaks:
+                     
+    #                 if name == row[1]:
+    #                     c +=1
+    #                 #     color = color[c]
+                        
+    #                 else:
+    #                     print('\n','Your metabolite:', row[1], '\n')
+    #                     c=1
+    #                 #     color = color[c]
+    #                 name = row[1]
+    #                 x0 = row[4]
+    #                 gamma=row[5]
+    #                 print('Peak', c,' with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm ')
+    #                 x = np.linspace(0, 10, 1000)
+    #                 y = lorentzian.loren(x,x0,gamma)
+    #                 ax.plot(x,y, label=(name, c) ) #'${name}$'.format(name=name))
+    #     ax.invert_xaxis()
+    #     ax.set_xlabel('ppm')
+    #     ax.set_title('Peaks ')
+    #     ax.grid(True)
+    #     ax.legend(loc='upper left') #'best', 'center right'
+    #     return fig
+
+    # peaks_fig = plot_peaks(groups_data)
+#  # ------------------------------------------------------------------------   
+    
     #Make a function for plotting where input is v or w 
     #Plot both??
     #Init the store single set of figure and axes, ax allows to invert the axes later

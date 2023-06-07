@@ -27,7 +27,7 @@ def suma(a,b):
 # x01= 3.24 #centre
 # gamma1 = 0.02 #width
 
-# x02= 5.73 #centre
+# x02= 3.34 #centre
 # gamma2 = 0.03 #width
 
 # #define the x axis 
@@ -58,6 +58,8 @@ def suma(a,b):
 
 # # plt.tight.layout()
 # plt.show()
+
+
 # a = int(input('ingrese el valor de a='))
 # b= int(input('ingrese el valor de b='))
 # suma()
