@@ -13,9 +13,9 @@ import matplotlib.colors
 import lorentzian
 from collections import defaultdict
 # path = 'C:/txts/peaks_table.txt'
-path = 'C:/txts/Copia de Metabo_tables_3.xlsx'
+path = 'C:/txts/Copia de Metabo_tables_4.xlsx'
 # NO SE PUEDE COGER DE UN EXCEL CON AUTOGUARDADO!!
-# path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables.xlsx"
+# path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables_3.xlsx"
 
 #Read data from excel 
 #Use the excel file line to not read the excel everytime you read a sheet 
@@ -52,8 +52,9 @@ def cluster_data(id):
     for i in id:
         for row in clust_m:
             if len(row)>0 and row[0]==i: #and len(row)>=7: #length of the row is 9 elements, just preventive
-            #id of met, name, number of clusters, concentration, centre of cluster, width of cluster 
-                total_clusters.append([i, mets_m[i-1,1],mets_m[i-1,4], mets_m[i-1,5], row[6], row[8]])
+                # width_n=lorentzian.norm(row[8]) #Commented until all values stored in excel #NORMALIZE the widths, it comes in MHzs
+            #id of met, name, number of clusters, cluster number, concentration, centre of cluster, width of cluster, number of Hs
+                total_clusters.append([i, mets_m[i-1,1],  mets_m[i-1,4], row[1], mets_m[i-1,5], row[6], row[8], row[4]])
 
         # indexes = clust_m[:,0]#we could avoid this step and store the whole row into f, but maybe to messy
         # f = np. where(indexes == i)[0] #This [0] makes an array
@@ -63,7 +64,7 @@ def cluster_data(id):
     # centre = clust_m[f,6]
     # width = clust_m[f,6]
     
-    return total_clusters #name_met, centre_clust, width_clust = mets_m[id,1], clust_m[id,6], clust_m[id,8]
+    return total_clusters 
 
 
 
@@ -81,8 +82,9 @@ def peaks_data(id):
     for i in id:
         for row in peaks_m:
             if len(row)>0 and row[0]==i:
-                                    #id, name of met, cluster number, peak number, centre, width 
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], row[4]])
+                width_norm = lorentzian.norm(row[5])                 
+                #id, name of met, cluster number,   peak number,  centre,   width
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_norm])
     
     return total_peaks
 #TODO, add ranges and use them for the movement of the clusters
@@ -90,10 +92,15 @@ def peaks_data(id):
 
 if __name__ == "__main__":
     
-    #Store the data from the matrixes in a variable
+    #Change the indexes to the metabolites you would like to see plot 
     input_met = [3,4,5]
+    #Store the data from the matrixes in a variable
     w = cluster_data(input_met)#Make a plot of clusts function
     v = peaks_data(input_met) #Collects the info from the peaks 
+    #TODO: peak shifting factor that will change the centre of peaks
+    #TODO: CONCENTRATION OF METABOLITE, stored in cluster CHECK
+    
+    
     #Define dictionary to arrange the peaks of each cluster
     # groups_data = defaultdict(list)
     groups_data = {}
@@ -105,7 +112,6 @@ if __name__ == "__main__":
     #Make a dict with two level, upper label is the metabolite number 
     #and the second level is the number of cluster
     #this way we can print cluster by cluster 
-    
     for row in v:
         key = row[0]
         key_2 = int(row[2])
@@ -143,7 +149,20 @@ if __name__ == "__main__":
         #     groups_data[key].append(row)
         # else:
         #     groups_data[key] = [row]
-        
+    #NEW FUNCTION TO STORE CENTRE OF PEAKS RELATION
+    #we need to have a vector with all the shifted centres, I would not
+    # change it directly in w because I think it is good to keep the reference of pH 7 
+    # def adjust clusters(new cluster vector)
+    # new_cluster_centre = 0
+    # check thiss againnnn, something wrong y clusters dont move together 
+    for row in w:
+        met = row[0]
+        clust_number = row[3]
+        for row_2 in groups_data[met][clust_number]:
+            diff = row_2[4]-row[5]
+            row_2[4] = row[5] + diff #new_cluster centre instead of row[5]
+      # return new_groups_data      
+    
         
     # def plot_fig(row):
         
@@ -160,16 +179,18 @@ if __name__ == "__main__":
     c = 0 #COUNTER TO NOT PLOT THE FIRST PEAK AND WAIT FOR WHOLE CLUSTER 
     clusterr=0
     idd=0
-    s=0
+    s=0 #suma de picos
+    ss=0 #suma de clusters
     
     for key,value in groups_data.items():#each met
+        ss=0 #reset suma de clusters
         for key_cluster, list_peaks in value.items():#each cluster
             for row in list_peaks:#inside the cluster
                 
                 name = row[1]
                 x0 = row[4]
                 gamma=row[5]
-                x = np.linspace(0, 10, 1000)
+                x = np.linspace(0, 6, 1000)
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
                     
@@ -187,22 +208,25 @@ if __name__ == "__main__":
                     y = lorentzian.loren(x,x0,gamma)
                     s=y
                     c=1
-                print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
+                print('Peak',c,'with a centre of', x0, 'ppm and a width of ',gamma)
                 idd=row[0]
                 clusterr=row[2] 
-                #Como saber cual es el final del cluster 
-                # plt.plot(x,s, label=(name, row[2]))
-            plt.plot(x,s, label=(name, row[2]))
+                
+                # plt.plot(x,y, label=(name, row[2]))#PLOT ALL THE PEAKS
+            plt.plot(x,s, label=(name, 's peaks',row[2]))#PLOT the sum of peaks/cluster
+            ss = lorentzian.suma(ss, s)#suma de clusters 
+        # plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
+        
         plt.gca().invert_xaxis()
         plt.xlabel('ppm')
-        plt.title('Clusters ')
+        plt.title('Clusters '+ name + ' '+ str(idd))
         plt.grid(True)
         plt.legend(loc='upper left') #'best', 'center right'
-        plt.show()
+        plt.show()#A PLOT SHOW PER METABOLITE
         
         
 # # ----------------------------------------------------------------------
-    # # |If you want to plot all peaks      
+    # |If you want to plot all peaks      
     # def plot_peaks(groups_data):
     #     name = 0  
     #     # custom_cmap = matplotlib.colors.ListedColormap(['red','yellow','blue'])
@@ -210,9 +234,9 @@ if __name__ == "__main__":
     #     c = 0
     #     fig, ax = plt.subplots()
     #     #NEW PLOT PROCEDURE WITH THE DICT TO PLOT PEAKS
-    #     for key,value in groups_data.items():
-    #         for key_cluster, list_peaks in value.items():
-    #             for row in list_peaks:
+    #     for key,value in groups_data.items():#each met
+    #         for key_cluster, list_peaks in value.items():#each cluster
+    #             for row in list_peaks:#inside cluster 
                      
     #                 if name == row[1]:
     #                     c +=1

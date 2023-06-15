@@ -19,6 +19,12 @@ def loren(x,x0,gamma):
 #define the x axis 
 # x = np.linspace(10, 0, 1000)
 
+spectral_f = 500
+def norm(valor):
+    
+    #Normalize the widths of the spectra, no need to time it by 10
+    return valor/spectral_f
+
 def suma(a,b):
     
     return a+b
