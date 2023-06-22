@@ -8,12 +8,15 @@ Alonso Moran Canella
 
 import numpy as np 
 import matplotlib.pyplot as plt 
+import random 
 
+#Could look more complex, but we may need to add more stuff to this formulas
 
 #define the function that will create the function 
 def loren(x,x0,gamma):
     
     # I think this is the cauchy-lorentzian or sth return 1 / (np.pi * gamma * (1 + ((x - x0)/gamma)**2))
+    #WE WILL HAVE TO MULTIPLY THE AREA TO THIS WHEN WE KNOW THE RIGHT ONE
     return (gamma/(np.pi*(gamma**2+(x-x0)**2)))
 
 #define the x axis 
@@ -28,6 +31,10 @@ def norm(valor):
 def suma(a,b):
     
     return a+b
+
+def gaussian(mu, sigma):
+    
+    return random.gauss(mu, sigma)
 
 # # #define the parameters here for now 
 # x01= 3.24 #centre
