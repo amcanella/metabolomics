@@ -154,7 +154,8 @@ if __name__ == "__main__":
         sigma = (rango1 - rango0)/2 
         #New cluster centre
         new_centre = lorentzian.gaussian(clust_centre, sigma)
-        print('The cluster',met,'old centre',clust_centre,'new centre', new_centre, 'and a range', sigma,'\n')
+        shift = new_centre - clust_centre
+        print('The cluster',met,'old centre',clust_centre,'new centre', new_centre, 'of difference',shift,'and a range', sigma,'\n')
         
         for row_2 in groups_data[met][clust_number]:
             
@@ -196,6 +197,7 @@ if __name__ == "__main__":
                 x0 = row[6] #old centre in row[4]
                 gamma=row[5]
                 x = np.linspace(0, 6, 1000)
+                shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
                     
@@ -213,7 +215,8 @@ if __name__ == "__main__":
                     y = lorentzian.loren(x,x0,gamma)
                     s=y
                     c=1
-                print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm and a width of ',gamma)
+                    
+                print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a width of ',gamma)
                 idd=row[0]
                 clusterr=row[2] 
                 
