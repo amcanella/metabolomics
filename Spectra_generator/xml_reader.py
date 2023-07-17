@@ -11,8 +11,8 @@ import xml.etree.ElementTree as ET
 
 #Write the path where the file is
 # path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/500_1H_glucose_edited.nmrML"
-path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/500_1H_glucose.xml"
-# path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/500_1H_glucose.xml"
+path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/500_1H_glucose.xml"
+# path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/500_1H_glucose.xml"
 # path = "C:/Repos/Metabolomics/Spectra_generator/500_1H_glucose_edited.nmrML"
 # glucose_xml = pd.read_xml(path, namespaces= {"doc": "http://nmrml.org/schema"})
 # xml = pd.DataFrame(path)

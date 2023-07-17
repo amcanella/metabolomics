@@ -13,11 +13,12 @@ import random
 #Could look more complex, but we may need to add more stuff to this formulas
 
 #define the function that will create the function 
-def loren(x,x0,gamma):
+def loren(x,x0,gamma,area_n,conc):
     
     # I think this is the cauchy-lorentzian or sth return 1 / (np.pi * gamma * (1 + ((x - x0)/gamma)**2))
     #WE WILL HAVE TO MULTIPLY THE AREA TO THIS WHEN WE KNOW THE RIGHT ONE
-    return (gamma/(np.pi*(gamma**2+(x-x0)**2)))
+    # return (gamma/(np.pi*(gamma**2+(x-x0)**2)))
+    return conc*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2))
 
 #define the x axis 
 # x = np.linspace(10, 0, 1000)
