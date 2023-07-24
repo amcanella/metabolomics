@@ -13,9 +13,10 @@ import matplotlib.colors
 import lorentzian
 from collections import defaultdict
 from copy import deepcopy
+from scipy import integrate
 
 # path = 'C:/txts/peaks_table.txt'
-path = 'C:/txts/Copia de Metabo_tables_7.xlsx'
+path = 'C:/txts/Copia de Metabo_tables_8.xlsx'
 # NO SE PUEDE COGER DE UN EXCEL CON AUTOGUARDADO!!
 # path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables_3.xlsx"
 
@@ -80,20 +81,27 @@ def cluster_data(met_id):
 #Collects the peaks information
 def peaks_data(met_id):
     #id=[3]
-    total_peaks = []
+    total_peaks = [] #init the peaks list 
+    total_areas = [] #init the areas sum list 
     for i in met_id:
+        suma=0 #restart the sum for another met
         for row in peaks_m:
             if len(row)>0 and row[0]==i:
+                #1. CONVERT WIDTHS TO PPM
                 width = row[5]
                 width_norm = lorentzian.norm(width) #Function that divides the width by the reference 500 MHz  
-                #Normalized area by dividing the are by the reference concentration used in the database
+                #2. NORMANILIZE area by dividing the area by the reference concentration used in the database
                 area_peak = row[6]
-                ref_concentration=mets_m[i-1,5]
+                ref_concentration=mets_m[i-1,5] #concentration stored in the chenomx 
                 area_norm = area_peak/ref_concentration
-                #id, name of met, cluster number,   peak number,  centre,   width normalized , area normalized, max concentration in urine profiler?? NO TENGO CLARO
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_norm, area_norm, mets_m[i-1,6]]) #EL ultimo sobra de poner, que se quede en el met 
-    
-    return total_peaks
+                #3. GET THE TOTAL AREA OF THE MET BY ADDING ALL THE PEAKS 
+                suma+=area_norm #sum the areas of the different peaks already normalized
+                
+                #id, name of met, cluster number,   peak number,  centre,   width normalized , area normalized,  
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_norm, area_norm]) # mets_m[i-1,6] max conc in urine profiler
+                
+        total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE )
+    return total_peaks,total_areas
 
 
 # Function that saves a list into a dict by met ID and cluster number 
@@ -110,7 +118,6 @@ def saveInDict(lista):
     #and the second level is the number of cluster
     #this way we can print cluster by cluster 
     
-    # !!!!!!ERROR: DEBIDO A ESTO EN ALGUNA PARTE SE AÑADE UN VALOR ADICIONAL A LA v QUE NO DEBERIA ESTAR!!!!!!!!!!
     for row in lista:
         key = row[0]
         key_2 = int(row[2])
@@ -124,18 +131,36 @@ def saveInDict(lista):
         
     return groups_data
 
-
+# MOVE UP 
+def mets_data(mets_id, areas):
+    c=0
+    total_mets=[]
+    for i in mets_id:
+        for row in mets_m:
+            if row[0]==i: #while with condition instead of for and if?
+                # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET
+                
+                total_mets.append([i,row[1],row[5], row[6], areas[c]])
+        c+=1
+    return total_mets
 
 
 if __name__ == "__main__":
     
+
+        
     #Change the indexes to the metabolites you would like to see plot 
+    #Create a rd function to select a number of mets and another to select which
     input_met = [3,4,5]
     #Store the data from the matrixes in a variable
-    w = cluster_data(input_met)#Make a plot of clusts function
-    v = peaks_data(input_met) #Collects the info from the peaks     
+    w = cluster_data(input_met)#Collects the cluster info from the demanded mets  
+    v , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets     
+    u = mets_data(input_met, t_areas) #Collects the mets info and and the total area normalized 
+    #TODO: divide total area for each lorentzian 
     #TODO: CONCENTRATION OF METABOLITE is correct on the peaks and give a random
     # within range 
+    #TODO:variate the width of the peaks within a gaussians, there are different variations, some repeated 
+    # less frequently than others, we gotta see this recurrency 
     
     # Store the list in a dictionary 
     peaks_dict = saveInDict(v)
@@ -160,38 +185,47 @@ if __name__ == "__main__":
             
             rango0=row[8]
             rango1=row[9]
-            sigma = 2
-            # sigma = (rango1 - rango0) #Change to 0.004 aunque bien para ver mejor el cambio 
+            sigma = 1 #(rango1 - rango0)/2 #NO SE APRECIAN LOS CAMBIOS CON EL 0.004 _!!!! 
             #New cluster centre
             new_centre = lorentzian.gaussian(clust_centre, sigma)
             shift = new_centre - clust_centre
             print('\n The cluster',clust_number,'old centre',clust_centre,'new centre', new_centre, 'of difference',shift,'and a range', sigma,'\n')
             
             for row_2 in d[met][clust_number]:
-                
+            
                 peak_centre=row_2[4]
+                
+                
                 # diff = peak_centre-clust_centre
                 # row_2[4] = new_centre + diff #new_cluster centre INSTEAD of row[5]
-                diff_clusts = new_centre - clust_centre #misma variable que shifts
-                diff_null = diff_clusts - shift 
-                new_peak = peak_centre + diff_clusts
-                row_2.append(new_peak) #creo que mas correcto seria hacer un for keys, values y appender en values, no en row 
+                # diff_clusts = new_centre - clust_centre #misma variable que shifts
+                # diff_null = diff_clusts - shift #should be 0 DELETE
+                # new_peak = peak_centre + diff_clusts
+                
+                new_peak = peak_centre + shift 
+                row_2.append(new_peak) #creo que mas correcto seria hacer un for keys, values y appender en values, YA PROBE Y NO FUNCIONA SOL:DEEPCOPY
                 #se puede simplificar como row_2[4]+= new_centre - clust_centre
-                print('The peak', row_2[3], 'had old peak', peak_centre,'a new peak', new_peak,'and a shift', diff_clusts)
+                print('The peak', row_2[3], 'had old peak', peak_centre,'a new peak', new_peak,'and a shift', shift)
             # return new_groups_data 
         return d
     
-    new_dict = addShift(peaks_dict_copy)
+    new_dict = addShift(peaks_dict_copy) #Llamar al copy, sino se produce el cambio en v 
     
     
     #FUNCTION to plot the peaks  
     # NEW PLOT TO PLOT CLUSTERS
     name = 0  
-    c = 0 #COUNTER TO NOT PLOT THE FIRST PEAK AND WAIT FOR WHOLE CLUSTER 
+    c = 0 #Peak Counter
+    ccc = 0 #MET counter 
     clusterr=0
     idd=0
     s=0 #suma de picos
     ss=0 #suma de clusters
+    
+    #CHECK FUNCT
+    integration_values = []
+    zcheckpoint=[]
+
     
     for key,value in new_dict.items():#each met
         ss=0 #reset suma de clusters within met
@@ -202,15 +236,16 @@ if __name__ == "__main__":
                 old_centree=row[4]
                 gamma=row[5]
                 area_r = row[6]
-                concentration = 0.003 #Me lo invento
-                x0 = row[8] #old centre in row[4]
-                x = np.linspace(0, 10, 65535) #parece que al poner 10000 las alturas no varian tanto
+                concentration = 0.003 #Me lo invento # = u[ccc][]TODO: CALL gaussian HERE TO GET THE CONCENTRATION from 0 and MAX that is in the peaks 
+                x0 = row[7] #old centre in row[4]
+                total_area = u[ccc][4]
+                x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
                 shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
                     
                     # Might work directly by writting in y, y+=?, no need of suma function?
-                    y = lorentzian.loren(x,x0,gamma,area_r,concentration)
+                    y = lorentzian.loren(x,x0,gamma,area_r,concentration, total_area)
                     s = lorentzian.suma(s,y)
                     c+=1 
                     # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
@@ -220,7 +255,7 @@ if __name__ == "__main__":
                     
                     #New metabolite begins
                     print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
-                    y = lorentzian.loren(x,x0,gamma, area_r, concentration)
+                    y = lorentzian.loren(x,x0,gamma, area_r, concentration, total_area)
                     s=y
                     c=1
                     
@@ -233,13 +268,23 @@ if __name__ == "__main__":
             ss = lorentzian.suma(ss, s)#suma de clusters within compound 
         plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
         
+        ccc+=1
+        # #I want to check that the ints are 1
+        integration = np.trapz(ss,x)
+        integration_values.append(integration)
+        #CHECKPOINT 
+        if  concentration+0.00015 >= integration >= concentration-0.00015:
+            zcheckpoint.append(['Function', ccc, 'True']) #I recycle the ccc to count each met 
+            print('True')
+        
         plt.gca().invert_xaxis()
         plt.xlabel('ppm')
         plt.title('Clusters '+ name + ' '+ str(idd))
         plt.grid(True)
         plt.legend(loc='upper left') #'best', 'center right'
         plt.show()#A PLOT SHOW PER METABOLITE
-        
+    
+   
         
 # # ----------------------------------------------------------------------
     # |If you want to plot all peaks      
@@ -279,84 +324,4 @@ if __name__ == "__main__":
     # peaks_fig = plot_peaks(groups_data)
 #  # ------------------------------------------------------------------------   
     
-    #Make a function for plotting where input is v or w 
-    #Plot both??
-    #Init the store single set of figure and axes, ax allows to invert the axes later
-    # fig is used to store the actual graph inside it and ax for the axes class
-    # fig, ax = plt.plot()
-    
-    # "'
-    # name=0
-    # count=1
-    # with plt.ion():
-    #     fig = plt.figure()
-    # for met in v:
-        
-    #     # Set the centre and the width for plotting
-    #     if met[1]==name:
-    #         count+=1
-    #     else:
-    #        print('\n','Your metabolite:', met[1], '\n')
-    #        count=1
-    #     name = met[1]
-    #     x0= met[4]
-    #     gamma= met[5] #0.02 #met[4] because i dont have the info of many cluster 
-    #     print('Peak', count,' With a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm is represented in the graph below.')
-    #     #TODO: apply same color to the clusters of the same metabolite
-    #     x = np.linspace(0, 10, 1000)
-    #     y = lorentzian.loren(x,x0,gamma)
-    #     if count==1:
-    #         plt.plot(x,y, label= name) #'${name}$'.format(name=name))
-    #     else:
-    #         plt.plot(x,y)
-    #     plt.gca().invert_xaxis()
-    #     plt.xlabel('ppm')
-    #     plt.title('Peaks ')
-    #     # plt.pause(2)
-    #     # plt.show()
-    
-    # plt.gca().invert_xaxis()
-    # plt.xlabel('ppm')
-    # plt.title('Peaks ')
-    # plt.grid(True)
-    # plt.legend(loc='best')
-    # plt.show()
-    
-    # "'
-    
-    # ax.plot()    
-    # ax.invert_xaxis() 
-    # ax.set_xlabel('ppm')
-    # ax.set_title('Plot of peaks')
-    # ax.grid(True)
-    # plt.legend(loc='best')
-    # plt.show()
-    
-    # ------SOME OLD DICTS 
-    
-    # rr = list(groups_data.items()) 
-        
-        # if key_2 not in groups_data[key]:
-        #     groups_data[key][key_2]=[]
-        # groups_data[key][key_2].append(row)
-    
-    # for row in v:
-    #     key_2 = row[2]
-    # With defaultdict
-    # for row in v:
-        
-    #     #Append first the 
-    #     key = row[0]
-    #     groups_data[key].append(row)
-        
-    # keys = list(dict.keys(groups_data))
-        # groups_data[key].append(row)
-            #TO add the groups_data[1][-1][0]
-        #See why the int data in peaks_m gets stored as float in v 
-    # for row in groups_data:
-    #     key = row[2]
-    #     groups_data[key].append(row)
-        # if key in groups_data:
-        #     groups_data[key].append(row)
-        # else:
-        #     groups_data[key] = [row]
+
