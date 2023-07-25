@@ -14,9 +14,11 @@ import lorentzian
 from collections import defaultdict
 from copy import deepcopy
 from scipy import integrate
+import random
+# from scipy.signal import find_peaks 
 
 # path = 'C:/txts/peaks_table.txt'
-path = 'C:/txts/Copia de Metabo_tables_8.xlsx'
+path = 'C:/txts/Copia de Metabo_tables_9.xlsx'
 # NO SE PUEDE COGER DE UN EXCEL CON AUTOGUARDADO!!
 # path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables_3.xlsx"
 
@@ -90,6 +92,13 @@ def peaks_data(met_id):
                 #1. CONVERT WIDTHS TO PPM
                 width = row[5]
                 width_norm = lorentzian.norm(width) #Function that divides the width by the reference 500 MHz  
+                width_var = width_norm*lorentzian.gaussian(1, 0.05) #5% small variation to the width of the peak, you need to multiply 
+                print(i,width_norm,'  ',width_var)
+                pc= width_norm*0.1   #quick check to see if all new width values are within the 10 % at least (i know it is 5 but might be some outties)
+                if  width_norm+pc >= width_var >= width_norm-pc:
+                    print('True')
+                else:
+                    print('False')
                 #2. NORMANILIZE area by dividing the area by the reference concentration used in the database
                 area_peak = row[6]
                 ref_concentration=mets_m[i-1,5] #concentration stored in the chenomx 
@@ -98,7 +107,7 @@ def peaks_data(met_id):
                 suma+=area_norm #sum the areas of the different peaks already normalized
                 
                 #id, name of met, cluster number,   peak number,  centre,   width normalized , area normalized,  
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_norm, area_norm]) # mets_m[i-1,6] max conc in urine profiler
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_norm]) # mets_m[i-1,6] max conc in urine profiler
                 
         total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE )
     return total_peaks,total_areas
@@ -138,9 +147,11 @@ def mets_data(mets_id, areas):
     for i in mets_id:
         for row in mets_m:
             if row[0]==i: #while with condition instead of for and if?
+                concentration = random.uniform(0, row[6]) #get a float between 0 and MAX concentration in chnMX
+                #mitad= row[6]/2 #Otra forma de hacerlo seria utilizando la gaussiana
+                #concentration = lorentzian.gaussian(mitad, mitad)
                 # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET
-                
-                total_mets.append([i,row[1],row[5], row[6], areas[c]])
+                total_mets.append([i,row[1],row[5], row[6], areas[c], concentration])
         c+=1
     return total_mets
 
@@ -156,7 +167,7 @@ if __name__ == "__main__":
     w = cluster_data(input_met)#Collects the cluster info from the demanded mets  
     v , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets     
     u = mets_data(input_met, t_areas) #Collects the mets info and and the total area normalized 
-    #TODO: divide total area for each lorentzian 
+    #TODO: divide total area for each lorentzian  DONE 
     #TODO: CONCENTRATION OF METABOLITE is correct on the peaks and give a random
     # within range 
     #TODO:variate the width of the peaks within a gaussians, there are different variations, some repeated 
@@ -164,20 +175,15 @@ if __name__ == "__main__":
     
     # Store the list in a dictionary 
     peaks_dict = saveInDict(v)
-    peaks_dict_copy = deepcopy(peaks_dict)
+    peaks_dict_copy = deepcopy(peaks_dict) #A shallow copy should not affect since we are adding a new value, not modifying, but it seems to append it
     
     
-    
+    #NEW FUNCTION TO STORE THE NEW CENTRE OF PEAKS RELATION, AS AN APPEND OF EACH LINE OF NEW DICT
     def addShift(d):
-        #NEW FUNCTION TO STORE CENTRE OF PEAKS RELATION, AS AN APPEND OF EACH LINE OF GROUPS_DATA
+        
         #we need to have a vector with all the shifted centres, I would not
         # change it directly in w because I think it is good to keep the reference of pH 7 
-        # def adjust clusters(new cluster vector)
-        # new_cluster_centre = 0
-        # THIS METHOD WORKS, we just need to add the new centre
-        #I would change the _edit so we keep original data somewhere stored 
-        # and make experiments with the _edit
-        # groups_data_edit = {}
+     
         for row in w:
             met = row[0]
             clust_number = row[3]
@@ -185,7 +191,7 @@ if __name__ == "__main__":
             
             rango0=row[8]
             rango1=row[9]
-            sigma = 1 #(rango1 - rango0)/2 #NO SE APRECIAN LOS CAMBIOS CON EL 0.004 _!!!! 
+            sigma = (rango1 - rango0)/2 #NO SE APRECIAN LOS CAMBIOS CON EL 0.004 _!!!! 
             #New cluster centre
             new_centre = lorentzian.gaussian(clust_centre, sigma)
             shift = new_centre - clust_centre
@@ -236,9 +242,11 @@ if __name__ == "__main__":
                 old_centree=row[4]
                 gamma=row[5]
                 area_r = row[6]
-                concentration = 0.003 #Me lo invento # = u[ccc][]TODO: CALL gaussian HERE TO GET THE CONCENTRATION from 0 and MAX that is in the peaks 
                 x0 = row[7] #old centre in row[4]
+                
                 total_area = u[ccc][4]
+                concentration = u[ccc][5]
+                
                 x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
                 shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
@@ -274,7 +282,7 @@ if __name__ == "__main__":
         integration_values.append(integration)
         #CHECKPOINT 
         if  concentration+0.00015 >= integration >= concentration-0.00015:
-            zcheckpoint.append(['Function', ccc, 'True']) #I recycle the ccc to count each met 
+            zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
             print('True')
         
         plt.gca().invert_xaxis()
