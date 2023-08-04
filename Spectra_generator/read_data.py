@@ -18,7 +18,7 @@ import random
 # from scipy.signal import find_peaks 
 
 # path = 'C:/txts/peaks_table.txt'
-path = 'C:/txts/Copia de Metabo_tables_9.xlsx'
+path = 'C:/txts/Copia de Metabo_tables_10.xlsx'
 # NO SE PUEDE COGER DE UN EXCEL CON AUTOGUARDADO!!
 # path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables_3.xlsx"
 
@@ -92,7 +92,7 @@ def peaks_data(met_id):
                 #1. CONVERT WIDTHS TO PPM
                 width = row[5]
                 width_norm = lorentzian.norm(width) #Function that divides the width by the reference 500 MHz  
-                width_var = width_norm*lorentzian.gaussian(1, 0.05) #5% small variation to the width of the peak, you need to multiply 
+                width_var = width_norm*lorentzian.gaussian(1, 0.04) #4% small variation to the width of the peak, you need to multiply 
                 print(i,width_norm,'  ',width_var)
                 pc= width_norm*0.1   #quick check to see if all new width values are within the 10 % at least (i know it is 5 but might be some outties)
                 if  width_norm+pc >= width_var >= width_norm-pc:
@@ -112,6 +112,20 @@ def peaks_data(met_id):
         total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE )
     return total_peaks,total_areas
 
+# METS DATA 
+def mets_data(mets_id, areas):
+    c=0
+    total_mets=[]
+    for i in mets_id:
+        for row in mets_m:
+            if row[0]==i: #while with condition instead of for and if?
+                concentration = random.uniform(0, row[6]) #get a float between 0 and MAX concentration in chnMX
+                #mitad= row[6]/2 #Otra forma de hacerlo seria utilizando la gaussiana
+                #concentration = lorentzian.gaussian(mitad, mitad)
+                # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET
+                total_mets.append([i,row[1],row[5], row[6], areas[c], concentration])
+        c+=1
+    return total_mets
 
 # Function that saves a list into a dict by met ID and cluster number 
 def saveInDict(lista):
@@ -140,21 +154,44 @@ def saveInDict(lista):
         
     return groups_data
 
-# MOVE UP 
-def mets_data(mets_id, areas):
-    c=0
-    total_mets=[]
-    for i in mets_id:
-        for row in mets_m:
-            if row[0]==i: #while with condition instead of for and if?
-                concentration = random.uniform(0, row[6]) #get a float between 0 and MAX concentration in chnMX
-                #mitad= row[6]/2 #Otra forma de hacerlo seria utilizando la gaussiana
-                #concentration = lorentzian.gaussian(mitad, mitad)
-                # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET
-                total_mets.append([i,row[1],row[5], row[6], areas[c], concentration])
-        c+=1
-    return total_mets
+#NEW FUNCTION TO STORE THE NEW CENTRE OF PEAKS RELATION, AS AN APPEND OF EACH LINE OF NEW DICT
+def addShift(d):
+    
+    #we need to have a vector with all the shifted centres, I would not
+    # change it directly in w because I think it is good to keep the reference of pH 7 
+ 
+    for row in w:
+        met = row[0]
+        clust_number = row[3]
+        clust_centre=row[5]
+        
+        rango0=row[8]
+        rango1=row[9]  #0.04
+        sigma = (rango1 - rango0)/2 #0.02 
+        #New cluster centre
+        new_centre = lorentzian.gaussian(clust_centre, sigma)
+        shift = new_centre - clust_centre
+        print('\n The cluster',clust_number,'old centre',clust_centre,'new centre', new_centre, 'of difference',shift,'and a range', sigma,'\n')
+        
+        for row_2 in d[met][clust_number]:
+        
+            peak_centre=row_2[4]
+            
+            
+            # diff = peak_centre-clust_centre
+            # row_2[4] = new_centre + diff #new_cluster centre INSTEAD of row[5]
+            # diff_clusts = new_centre - clust_centre #misma variable que shifts
+            # diff_null = diff_clusts - shift #should be 0 DELETE
+            # new_peak = peak_centre + diff_clusts
+            
+            new_peak = peak_centre + shift 
+            row_2.append(new_peak) #creo que mas correcto seria hacer un for keys, values y appender en values, YA PROBE Y NO FUNCIONA SOL:DEEPCOPY
+            #se puede simplificar como row_2[4]+= new_centre - clust_centre
+            print('The peak', row_2[3], 'had old peak', peak_centre,'a new peak', new_peak,'and a shift', shift)
+        # return new_groups_data 
+    return d
 
+    
 
 if __name__ == "__main__":
     
@@ -162,7 +199,7 @@ if __name__ == "__main__":
         
     #Change the indexes to the metabolites you would like to see plot 
     #Create a rd function to select a number of mets and another to select which
-    input_met = [3,4,5]
+    input_met = [3, 4, 5]
     #Store the data from the matrixes in a variable
     w = cluster_data(input_met)#Collects the cluster info from the demanded mets  
     v , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets     
@@ -177,47 +214,19 @@ if __name__ == "__main__":
     peaks_dict = saveInDict(v)
     peaks_dict_copy = deepcopy(peaks_dict) #A shallow copy should not affect since we are adding a new value, not modifying, but it seems to append it
     
-    
-    #NEW FUNCTION TO STORE THE NEW CENTRE OF PEAKS RELATION, AS AN APPEND OF EACH LINE OF NEW DICT
-    def addShift(d):
-        
-        #we need to have a vector with all the shifted centres, I would not
-        # change it directly in w because I think it is good to keep the reference of pH 7 
-     
-        for row in w:
-            met = row[0]
-            clust_number = row[3]
-            clust_centre=row[5]
-            
-            rango0=row[8]
-            rango1=row[9]
-            sigma = (rango1 - rango0)/2 #NO SE APRECIAN LOS CAMBIOS CON EL 0.004 _!!!! 
-            #New cluster centre
-            new_centre = lorentzian.gaussian(clust_centre, sigma)
-            shift = new_centre - clust_centre
-            print('\n The cluster',clust_number,'old centre',clust_centre,'new centre', new_centre, 'of difference',shift,'and a range', sigma,'\n')
-            
-            for row_2 in d[met][clust_number]:
-            
-                peak_centre=row_2[4]
-                
-                
-                # diff = peak_centre-clust_centre
-                # row_2[4] = new_centre + diff #new_cluster centre INSTEAD of row[5]
-                # diff_clusts = new_centre - clust_centre #misma variable que shifts
-                # diff_null = diff_clusts - shift #should be 0 DELETE
-                # new_peak = peak_centre + diff_clusts
-                
-                new_peak = peak_centre + shift 
-                row_2.append(new_peak) #creo que mas correcto seria hacer un for keys, values y appender en values, YA PROBE Y NO FUNCIONA SOL:DEEPCOPY
-                #se puede simplificar como row_2[4]+= new_centre - clust_centre
-                print('The peak', row_2[3], 'had old peak', peak_centre,'a new peak', new_peak,'and a shift', shift)
-            # return new_groups_data 
-        return d
-    
     new_dict = addShift(peaks_dict_copy) #Llamar al copy, sino se produce el cambio en v 
     
-    
+    #FUNCTION TO PLOT SIGNALS 
+    def plot_funct(x,y,name,texto,number,idd):
+        
+        plt.plot(x,y,label = (name,texto, number))
+        plt.gca().invert_xaxis()
+        plt.xlabel('ppm')
+        plt.title('Clusters '+ name + ' '+ str(idd))
+        plt.grid(True)
+        plt.legend(loc='upper left') #'best', 'center right'
+        plt.show()#A PLOT SHOW PER METABOLITE
+        
     #FUNCTION to plot the peaks  
     # NEW PLOT TO PLOT CLUSTERS
     name = 0  
@@ -227,7 +236,7 @@ if __name__ == "__main__":
     idd=0
     s=0 #suma de picos
     ss=0 #suma de clusters
-    
+    m=0 #suma de mets 
     #CHECK FUNCT
     integration_values = []
     zcheckpoint=[]
@@ -239,15 +248,18 @@ if __name__ == "__main__":
             for row in list_peaks:#inside the cluster
                 
                 name = row[1]
+                clust_number = row[2]
+                peak_number = row[3]
                 old_centree=row[4]
                 gamma=row[5]
                 area_r = row[6]
                 x0 = row[7] #old centre in row[4]
                 
                 total_area = u[ccc][4]
-                concentration = u[ccc][5]
+                concentration = 0.3 #u[ccc][5]
                 
-                x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
+                # x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
+                x = np.linspace(0.04, 10, 32768) #dijo jose que los espectros se cortaban ahí
                 shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
@@ -272,10 +284,14 @@ if __name__ == "__main__":
                 clusterr=row[2] 
                 
                 # plt.plot(x,y, label=(name, row[2]))#PLOT ALL THE PEAKS
-            plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/cluster
+                # plot_funct(x, y, name, clust_number, peak_number, idd) #Call the function to plot all peaks individually, 
+                #                                                         otherwise a mess if plot function at the end of all the loop  
+            # plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/ each cluster
             ss = lorentzian.suma(ss, s)#suma de clusters within compound 
-        plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
-        
+        # plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
+        # plot_funct(x, ss, name, 'suma', idd, idd)
+        m = lorentzian.suma(m, ss)
+    
         ccc+=1
         # #I want to check that the ints are 1
         integration = np.trapz(ss,x)
@@ -284,13 +300,92 @@ if __name__ == "__main__":
         if  concentration+0.00015 >= integration >= concentration-0.00015:
             zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
             print('True')
+        indexes = str(list(new_dict.keys()))
+    plt.plot(x,m, 'g', label = ('ALL COMPOUNDS'))    
+    plt.gca().invert_xaxis()
+    plt.xlabel('ppm')
+    plt.title('All compounds '+ indexes)
+    plt.grid(True)
+    plt.legend(loc='upper left') #'best', 'center right'
+    plt.show()#A PLOT SHOW PER METABOLITE
+    
+
+ 
+    
+    # ---------------------------------------------------
+    # #FUNCTION to plot the peaks  
+    # # NEW PLOT TO PLOT CLUSTERS
+    # name = 0  
+    # c = 0 #Peak Counter
+    # ccc = 0 #MET counter 
+    # clusterr=0
+    # idd=0
+    # s=0 #suma de picos
+    # ss=0 #suma de clusters
+    
+    # #CHECK FUNCT
+    # integration_values = []
+    # zcheckpoint=[]
+
+    
+    # for key,value in new_dict.items():#each met
+    #     ss=0 #reset suma de clusters within met
+    #     for key_cluster, list_peaks in value.items():#each cluster
+    #         for row in list_peaks:#inside the cluster
+                
+    #             name = row[1]
+    #             old_centree=row[4]
+    #             gamma=row[5]
+    #             area_r = row[6]
+    #             x0 = row[7] #old centre in row[4]
+                
+    #             total_area = u[ccc][4]
+    #             concentration = 0.3 #u[ccc][5]
+                
+    #             x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
+    #             shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
+    #             #Add the correction factor for the centre and Hs for every cluster 
+    #             if row[0]==idd and row[2]==clusterr:
+                    
+    #                 # Might work directly by writting in y, y+=?, no need of suma function?
+    #                 y = lorentzian.loren(x,x0,gamma,area_r,concentration, total_area)
+    #                 s = lorentzian.suma(s,y)
+    #                 c+=1 
+    #                 # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
+    #             else:
+    #                 # if c>0:
+    #                 #     plt.plot(x,s, label=(name, row[2]))
+                    
+    #                 #New metabolite begins
+    #                 print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
+    #                 y = lorentzian.loren(x,x0,gamma, area_r, concentration, total_area)
+    #                 s=y
+    #                 c=1
+                    
+    #             print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a width of ',gamma)
+    #             idd=row[0]
+    #             clusterr=row[2] 
+                
+    #             # plt.plot(x,y, label=(name, row[2]))#PLOT ALL THE PEAKS
+    #         plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/cluster
+    #         ss = lorentzian.suma(ss, s)#suma de clusters within compound 
+    #     plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
         
-        plt.gca().invert_xaxis()
-        plt.xlabel('ppm')
-        plt.title('Clusters '+ name + ' '+ str(idd))
-        plt.grid(True)
-        plt.legend(loc='upper left') #'best', 'center right'
-        plt.show()#A PLOT SHOW PER METABOLITE
+    #     ccc+=1
+    #     # #I want to check that the ints are 1
+    #     integration = np.trapz(ss,x)
+    #     integration_values.append(integration)
+    #     #CHECKPOINT 
+    #     if  concentration+0.00015 >= integration >= concentration-0.00015:
+    #         zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
+    #         print('True')
+        
+    #     plt.gca().invert_xaxis()
+    #     plt.xlabel('ppm')
+    #     plt.title('Clusters '+ name + ' '+ str(idd))
+    #     plt.grid(True)
+    #     plt.legend(loc='upper left') #'best', 'center right'
+    #     plt.show()#A PLOT SHOW PER METABOLITE
     
    
         
