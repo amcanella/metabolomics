@@ -109,7 +109,7 @@ def peaks_data(met_id):
                 #id, name of met, cluster number,   peak number,  centre,   width normalized , area normalized,  
                 total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_norm]) # mets_m[i-1,6] max conc in urine profiler
                 
-        total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE )
+        total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE mets, since it is mets data)
     return total_peaks,total_areas
 
 # METS DATA 
@@ -239,6 +239,7 @@ if __name__ == "__main__":
     m=0 #suma de mets 
     #CHECK FUNCT
     integration_values = []
+    integration_values_sum = 0
     zcheckpoint=[]
 
     
@@ -252,11 +253,11 @@ if __name__ == "__main__":
                 peak_number = row[3]
                 old_centree=row[4]
                 gamma=row[5]
-                area_r = row[6]
+                area_r = 10 #row[6]
                 x0 = row[7] #old centre in row[4]
                 
                 total_area = u[ccc][4]
-                concentration = 0.3 #u[ccc][5]
+                concentration = 0.4 #u[ccc][5]
                 
                 # x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
                 x = np.linspace(0.04, 10, 32768) #dijo jose que los espectros se cortaban ahí
@@ -265,7 +266,7 @@ if __name__ == "__main__":
                 if row[0]==idd and row[2]==clusterr:
                     
                     # Might work directly by writting in y, y+=?, no need of suma function?
-                    y = lorentzian.loren(x,x0,gamma,area_r,concentration, total_area)
+                    y = lorentzian.loren(x,x0,gamma,area_r,concentration)
                     s = lorentzian.suma(s,y)
                     c+=1 
                     # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
@@ -275,7 +276,7 @@ if __name__ == "__main__":
                     
                     #New metabolite begins
                     print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
-                    y = lorentzian.loren(x,x0,gamma, area_r, concentration, total_area)
+                    y = lorentzian.loren(x,x0,gamma, area_r, concentration)
                     s=y
                     c=1
                     
@@ -291,7 +292,7 @@ if __name__ == "__main__":
         # plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
         # plot_funct(x, ss, name, 'suma', idd, idd)
         m = lorentzian.suma(m, ss)
-    
+        # TODO: ADD NOISE HERE para cada uno de los 
         ccc+=1
         # #I want to check that the ints are 1
         integration = np.trapz(ss,x)
@@ -301,6 +302,9 @@ if __name__ == "__main__":
             zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
             print('True')
         indexes = str(list(new_dict.keys()))
+        integration_values_sum += integration_values[-1]
+    m = m/integration_values_sum
+    integration_total = np.trapz(m,x)
     plt.plot(x,m, 'g', label = ('ALL COMPOUNDS'))    
     plt.gca().invert_xaxis()
     plt.xlabel('ppm')
