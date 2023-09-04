@@ -10,7 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import random 
 
-#Could look more complex, but we may need to add more stuff to this formulas
+
+#Could look more complex, we may need to add more stuff to this formulas
 
 #define the formula for the lorentzian function
 def loren(x,x0,gamma,area_n,conc):
@@ -37,6 +38,7 @@ def suma(a,b):
 def gaussian(mu, sigma):
     
     return random.gauss(mu, sigma)
+
 
 # # #define the parameters here for now 
 # x01= 3.24 #centre

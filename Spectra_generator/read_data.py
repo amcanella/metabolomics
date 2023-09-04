@@ -15,6 +15,7 @@ from collections import defaultdict
 from copy import deepcopy
 from scipy import integrate
 import random
+import datetime
 # from scipy.signal import find_peaks 
 
 # path = 'C:/txts/peaks_table.txt'
@@ -34,7 +35,6 @@ peaks_x = pd.read_excel(xls, 'Peaks')
 
 #Store data in a matrix 
 mets_m = mets_x.values
-# print(mets_m)
 clust_m = clust_x.values 
 peaks_m = peaks_x.values
 
@@ -42,7 +42,7 @@ peaks_m = peaks_x.values
 # we need the centre of the cluster, width of the cluster although could be various, centre of the peak and width,
 #in order to do this, we need to calle the function with a name or id of metabolite and we get all the data about it
 
-def cluster_data(met_id):
+def cluster_data(met_id):#TODO: try to be consistent and name this clusterData since it is not a variable
         # Init variables 
         # centre_clust = 0
         # width_clust = 0
@@ -120,6 +120,7 @@ def mets_data(mets_id, areas):
         for row in mets_m:
             if row[0]==i: #while with condition instead of for and if?
                 concentration = random.uniform(0, row[6]) #get a float between 0 and MAX concentration in chnMX
+                # concentration = [desired_con_1, ..] 
                 #mitad= row[6]/2 #Otra forma de hacerlo seria utilizando la gaussiana
                 #concentration = lorentzian.gaussian(mitad, mitad)
                 # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET
@@ -199,7 +200,7 @@ if __name__ == "__main__":
         
     #Change the indexes to the metabolites you would like to see plot 
     #Create a rd function to select a number of mets and another to select which
-    input_met = [3, 4, 5]
+    input_met = [3,4,5] #TODO: add a input() to add mets or retrieve mets randomly from list?
     #Store the data from the matrixes in a variable
     w = cluster_data(input_met)#Collects the cluster info from the demanded mets  
     v , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets     
@@ -240,6 +241,7 @@ if __name__ == "__main__":
     #CHECK FUNCT
     integration_values = []
     integration_values_sum = 0
+    int_total_area=0
     zcheckpoint=[]
 
     
@@ -248,19 +250,21 @@ if __name__ == "__main__":
         for key_cluster, list_peaks in value.items():#each cluster
             for row in list_peaks:#inside the cluster
                 
+                #peak variables 
                 name = row[1]
                 clust_number = row[2]
                 peak_number = row[3]
                 old_centree=row[4]
                 gamma=row[5]
-                area_r = 10 #row[6]
+                area_r = row[6]
                 x0 = row[7] #old centre in row[4]
                 
+                #met variables 
                 total_area = u[ccc][4]
-                concentration = 0.4 #u[ccc][5]
+                concentration = u[ccc][5] #TODO: add this wished concentration to the prompt input 
                 
                 # x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
-                x = np.linspace(0.04, 10, 32768) #dijo jose que los espectros se cortaban ahí
+                x = np.linspace(0.04, 10, 32_768) #start, end, length variables 
                 shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
@@ -289,28 +293,83 @@ if __name__ == "__main__":
                 #                                                         otherwise a mess if plot function at the end of all the loop  
             # plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/ each cluster
             ss = lorentzian.suma(ss, s)#suma de clusters within compound 
+        # plot_funct(x, ss, name, clust_number, peak_number, idd)
         # plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
         # plot_funct(x, ss, name, 'suma', idd, idd)
         m = lorentzian.suma(m, ss)
-        # TODO: ADD NOISE HERE para cada uno de los 
+        
+        #add one to the index counter
         ccc+=1
         # #I want to check that the ints are 1
-        integration = np.trapz(ss,x)
-        integration_values.append(integration)
+        integration_ss = np.trapz(ss,x) #No va a ser uno porque no dividimos por area total
+        integration_values.append(integration_ss)
+        
         #CHECKPOINT 
-        if  concentration+0.00015 >= integration >= concentration-0.00015:
+        if  concentration+0.00015 >= integration_ss >= concentration-0.00015:
             zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
             print('True')
         indexes = str(list(new_dict.keys()))
         integration_values_sum += integration_values[-1]
-    m = m/integration_values_sum
+        int_total_area += total_area * concentration #the already normalized area of each met * the concentration of each met
+    # TODO: ADD NOISE HERE para cada uno de los 
+    #TODO: make a noise function
+    mu= 0 
+    sigma = 0.0001
+    noise = np.random.normal(mu, sigma, len(m))
+    m_noise = m + noise
+    integration_m_noise = np.trapz(m_noise,x)
+    m1 = m/integration_values_sum
+    m2 = m/int_total_area
+    m3 = m_noise/integration_m_noise
     integration_total = np.trapz(m,x)
-    plt.plot(x,m, 'g', label = ('ALL COMPOUNDS'))    
-    plt.gca().invert_xaxis()
+    integration_total_2 = np.trapz(m1,x)
+    integration_total_3 = np.trapz(m2,x)
+    integration_total_4 = np.trapz(m3,x)
+    
+    #Add date and time 
+    current_datetime= datetime.datetime.now()
+    f_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M")
+    
+    with open ("function_values"+".txt", "w") as file:
+        r = 0
+        file.write(str(indexes) +"  " +"\n"+ f"{mu} "+ f"{sigma}"+"\n")
+        for value in m3: 
+            file.write(f"{x[r]} " + f" {value}"+"\n")
+            r+=1
+            
+    # file.close() #no need to close, the with statement takes care of it to ensure changes saves and resources released 
+    
+    fig, ax = plt.subplots(4,1)
+    
+    ax[0].plot(x,m_noise, 'g', label = ('ALL COMPOUNDS'))    
+    ax[0].set_title('All compounds '+ indexes)
+    ax[0].grid(True)
+    ax[0].invert_xaxis()
+    
+    
+    ax[1].plot(x,m1, 'r', label = ('ALL COMPOUNDS'))
+    ax[1].grid(True)  
+    ax[1].invert_xaxis()
+    
+    ax[2].plot(x,m2, 'b', label = 'ALL COMPOUNDS')    
+    ax[2].grid(True) 
+    ax[2].invert_xaxis()
+    
+    ax[3].plot(x,m3, 'm', label = 'ALL COMPOUNDS')    
+    ax[3].grid(True) 
+    ax[3].invert_xaxis()
+    
+    
+    
+    
+    # plt.plot(x,m3, 'g', label = ('ALL COMPOUNDS'))    
+    # plt.plot(x,m1, 'r', label = ('ALL COMPOUNDS'))    
+    # plt.plot(x,m2, 'b', label = ('ALL COMPOUNDS'))    
+    # plt.gca().invert_xaxis()
     plt.xlabel('ppm')
-    plt.title('All compounds '+ indexes)
+    # plt.title('All compounds '+ indexes)
     plt.grid(True)
-    plt.legend(loc='upper left') #'best', 'center right'
+    # plt.legend(loc='upper left') #'best', 'center right'
     plt.show()#A PLOT SHOW PER METABOLITE
     
 
