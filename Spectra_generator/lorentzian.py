@@ -14,22 +14,27 @@ import random
 #Could look more complex, we may need to add more stuff to this formulas
 
 #define the formula for the lorentzian function
-def loren(x,x0,gamma,area_n,conc):
+def loren(x,x0,gamma,area_n,conc, conc_ref):
     
     # I think this is the cauchy-lorentzian or sth return 1 / (np.pi * gamma * (1 + ((x - x0)/gamma)**2))
     #WE WILL HAVE TO MULTIPLY THE AREA TO THIS WHEN WE KNOW THE RIGHT ONE
     # return (gamma/(np.pi*(gamma**2+(x-x0)**2)))
     # return (conc*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2)))/t_area
-    return (conc*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2)))
+    return ((conc/conc_ref)*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2)))
 
 #define the x axis 
 # x = np.linspace(10, 0, 1000)
 
-spectral_f = 500
-def norm(valor):
+#function to set the width: normalize and add variation to the widths 
+#Normalize the widths of the spectra
+def width_set(valor):
     
-    #Normalize the widths of the spectra, no need to time it by 10
-    return valor/spectral_f
+    spectral_f = 500 #becuase the samples are taken at 500 MHz
+    
+    width_norm = valor/spectral_f #Function that divides the width by the reference 500 MHz  
+    width_var = width_norm*random.gauss(1, 0.04) #4% small variation to the width of the peak, you need to multiply 
+    
+    return width_var
 
 def suma(a,b):
     

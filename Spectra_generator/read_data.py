@@ -90,25 +90,29 @@ def peaks_data(met_id):
         suma=0 #restart the sum for another met
         for row in peaks_m:
             if len(row)>0 and row[0]==i:
-                #1. CONVERT WIDTHS TO PPM
+                #1. CONVERT WIDTHS TO PPM and add the variation
                 width = row[5]
-                width_norm = lorentzian.norm(width) #Function that divides the width by the reference 500 MHz  
-                width_var = width_norm*lorentzian.gaussian(1, 0.04) #4% small variation to the width of the peak, you need to multiply 
-                print(i,width_norm,'  ',width_var)
-                pc= width_norm*0.1   #quick check to see if all new width values are within the 10 % at least (i know it is 5 but might be some outties)
+                width_var = lorentzian.width_set(width)
+                
+                
+                width_norm = width / 500 #quick check to see if all new width values are within the 10 % at least (i know it is 4 but might be some outties)
+                pc= width_norm*0.1 
+                print(f'{i} {width_norm:.6f}  {width_var:.8f}')
                 if  width_norm+pc >= width_var >= width_norm-pc:
-                    print('True')
+                    print('True')    
                 else:
                     print('False')
-                #2. NORMANILIZE area by dividing the area by the reference concentration used in the database
+                    # raise ValueError('width variation out of range ')
+                #2. NORMANILIZE area, not anymore, AREA AND CONCENTRATION GO DIFFERENT WAYS 
                 area_peak = row[6]
                 ref_concentration=mets_m[i-1,5] #concentration stored in the chenomx 
-                area_norm = area_peak/ref_concentration
+                # area_norm = area_peak/ref_concentration
                 #3. GET THE TOTAL AREA OF THE MET BY ADDING ALL THE PEAKS 
-                suma+=area_norm #sum the areas of the different peaks already normalized
+                # suma+=area_norm #sum the areas of the different peaks already normalized
+                suma+=area_peak #sum the areas of the different peaks already normalized
                 
-                #id, name of met, cluster number,   peak number,  centre,   width normalized , area normalized,  
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_norm]) # mets_m[i-1,6] max conc in urine profiler
+                #id, name of met, cluster number,   peak number,  centre,   width normalized , area , concentration of the sample in chenoMX 
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_peak, ref_concentration]) # mets_m[i-1,6] max conc in urine profiler
                 
         total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE mets, since it is mets data)
     return total_peaks,total_areas
@@ -162,7 +166,7 @@ def addShift(d):
     #we need to have a vector with all the shifted centres, I would not
     # change it directly in w because I think it is good to keep the reference of pH 7 
  
-    for row in w:
+    for row in cluster_l:
         met = row[0]
         clust_number = row[3]
         clust_centre=row[5]
@@ -208,7 +212,7 @@ def plot_funct(x,y,name,texto,number,idd):
     
      
 #FUNCTION to plot the peaks  
-def plot_compounds(dict_, iteration_number):
+def plot_compounds(dict_, iteration_number=1):
        
    
     # NEW PLOT TO PLOT CLUSTERS
@@ -225,6 +229,7 @@ def plot_compounds(dict_, iteration_number):
     integration_values_sum = 0
     int_total_area=0
     zcheckpoint=[]
+    conc_solution_row = [0]*len(mets_m)
     
     for key,value in dict_.items():#each met
         ss=0 #reset suma de clusters within met
@@ -232,26 +237,32 @@ def plot_compounds(dict_, iteration_number):
             for row in list_peaks:#inside the cluster
                 
                 #peak variables 
+                id_met = row[0]
                 name = row[1]
                 clust_number = row[2]
                 peak_number = row[3]
                 old_centree=row[4]
                 gamma=row[5]
                 area_r = row[6]
-                x0 = row[7] #old centre in row[4]
+                concentration_ref = row[7]
+                x0 = row[8] 
                 
                 #met variables 
-                total_area = u[ccc][4]
-                concentration = u[ccc][5] #TODO: add this wished concentration to the prompt input 
+                total_area = mets_l[ccc][4]
+                concentration = mets_l[ccc][5] #TODO: add this wished concentration to the prompt input 
+                conc_solution_row[id_met-1] = concentration
                 
                 # x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
-                x = np.linspace(0.04, 10, 32_768) #start, end, length variables 
+                # x = np.linspace(0.04, 10, 32_768) #start, end, length variables 
+                x = np.linspace(-1.997, 12.024, 32_768) #start, end, length variables 
+                
+
                 shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
                     
                     # Might work directly by writting in y, y+=?, no need of suma function?
-                    y = lorentzian.loren(x,x0,gamma,area_r,concentration)
+                    y = lorentzian.loren(x,x0,gamma,area_r,concentration, concentration_ref)
                     s = lorentzian.suma(s,y)
                     c+=1 
                     # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
@@ -261,11 +272,11 @@ def plot_compounds(dict_, iteration_number):
                     
                     #New metabolite begins
                     print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
-                    y = lorentzian.loren(x,x0,gamma, area_r, concentration)
+                    y = lorentzian.loren(x,x0,gamma, area_r, concentration,concentration_ref)
                     s=y
                     c=1
                     
-                print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a width of ',gamma)
+                print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a concentration of ',concentration)
                 idd=row[0]
                 clusterr=row[2] 
                 
@@ -291,11 +302,12 @@ def plot_compounds(dict_, iteration_number):
             print('True')
         indexes = str(list(new_dict.keys()))
         integration_values_sum += integration_values[-1]
-        int_total_area += total_area * concentration #the already normalized area of each met * the concentration of each met
+        int_total_area += total_area * concentration #the area of each met * the concentration of each met
     # TODO: ADD NOISE HERE para cada uno de los 
     #TODO: make a noise function
     mu= 0 
     sigma = 0.0001
+    
     noise = np.random.normal(mu, sigma, len(m))
     m_noise = m + noise
     integration_m_noise = np.trapz(m_noise,x)
@@ -311,7 +323,8 @@ def plot_compounds(dict_, iteration_number):
     current_datetime= datetime.datetime.now()
     f_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     
-    with open ("function_values_"+f_datetime+"_"+str(iter_)+".txt", "w") as file:
+    # with open ("function_values_"+f_datetime+"_"+str(iter_)+".txt", "w") as file:
+    with open ("function_values3"+".txt", "w") as file:
         r = 0
         file.write(str(indexes) +"  " +"\n"+ f"{mu} "+ f"{sigma}"+"\n")
         for value in m3: 
@@ -339,7 +352,10 @@ def plot_compounds(dict_, iteration_number):
     # ax[3].plot(x,m3, 'm', label = 'ALL COMPOUNDS')    
     # ax[3].grid(True) 
     # ax[3].invert_xaxis()
-    
+    #Aplicar esto despues del ruido no??
+    m3[: 5557] = 0
+    m3[16107 : 16692] = 0
+    m3[ 28031 :] = 0
     
     
     
@@ -353,7 +369,7 @@ def plot_compounds(dict_, iteration_number):
     plt.legend(loc='upper left') #'best', 'center right'
     plt.show()#A PLOT SHOW PER METABOLITE
 
-    return m3
+    return m3, conc_solution_row
 
  
 
@@ -361,28 +377,43 @@ if __name__ == "__main__":
     
     start = time.perf_counter()
     
-    for iter_ in range(10):    
+    instances = 10
+    result = [0]*instances
+    conc_solution = [0]*instances
+  
+    for i in range(instances):   
         #Change the indexes to the metabolites you would like to see plot 
         #Create a rd function to select a number of mets and another to select which
         input_met = [3,4,5] #TODO: add a input() to add mets or retrieve mets randomly from list?
         #Store the data from the matrixes in a variable
-        w = cluster_data(input_met)#Collects the cluster info from the demanded mets  
-        v , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets     
-        u = mets_data(input_met, t_areas) #Collects the mets info and and the total area normalized 
+        cluster_l = cluster_data(input_met)#Collects the cluster info from the demanded mets  
+        peaks_l , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets, the total areas is to sum the peaks areas
+        mets_l = mets_data(input_met, t_areas) #Collects the mets info and and the total area normalized 
         #TODO: divide total area for each lorentzian  DONE 
         #TODO: CONCENTRATION OF METABOLITE is correct on the peaks and give a random
         # within range 
         #TODO:variate the width of the peaks within a gaussians, there are different variations, some repeated 
         # less frequently than others, we gotta see this recurrency 
         
+        
         # Store the list in a dictionary 
-        peaks_dict = saveInDict(v)
+        peaks_dict = saveInDict(peaks_l)
         peaks_dict_copy = deepcopy(peaks_dict) #A shallow copy should not affect since we are adding a new value, not modifying, but it seems to append it
         
+        # ---------------I THINK WE CAN START THE FOR LOOP FROM HERE 
         new_dict = addShift(peaks_dict_copy) #Llamar al copy, sino se produce el cambio en v 
         
-        p = plot_compounds(new_dict, iter_)
+        result[i], conc_solution[i] = plot_compounds(new_dict) #, iter_)
+        
+    #Current date and time
+    current_datetime= datetime.datetime.now()
+    f_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     
+    # np.savetxt(f'input_{f_datetime}.txt', result, delimiter=' ')   
+    np.savetxt(f'input_1.txt', result, delimiter=' ')   
+    
+    np.savetxt(f'ymet.txt', conc_solution, delimiter=' ')   
+        
     end = time.perf_counter()
     
     elapsed = end - start
@@ -544,123 +575,5 @@ if __name__ == "__main__":
  #        plt.grid(True)
  #        plt.legend(loc='upper left') #'best', 'center right'
  #        plt.show()#A PLOT SHOW PER METABOLITE
-    
-# *****************************************____________________________________________________-
- 
-    
-    # ---------------------------------------------------
-    # #FUNCTION to plot the peaks  
-    # # NEW PLOT TO PLOT CLUSTERS
-    # name = 0  
-    # c = 0 #Peak Counter
-    # ccc = 0 #MET counter 
-    # clusterr=0
-    # idd=0
-    # s=0 #suma de picos
-    # ss=0 #suma de clusters
-    
-    # #CHECK FUNCT
-    # integration_values = []
-    # zcheckpoint=[]
-
-    
-    # for key,value in new_dict.items():#each met
-    #     ss=0 #reset suma de clusters within met
-    #     for key_cluster, list_peaks in value.items():#each cluster
-    #         for row in list_peaks:#inside the cluster
-                
-    #             name = row[1]
-    #             old_centree=row[4]
-    #             gamma=row[5]
-    #             area_r = row[6]
-    #             x0 = row[7] #old centre in row[4]
-                
-    #             total_area = u[ccc][4]
-    #             concentration = 0.3 #u[ccc][5]
-                
-    #             x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
-    #             shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
-    #             #Add the correction factor for the centre and Hs for every cluster 
-    #             if row[0]==idd and row[2]==clusterr:
-                    
-    #                 # Might work directly by writting in y, y+=?, no need of suma function?
-    #                 y = lorentzian.loren(x,x0,gamma,area_r,concentration, total_area)
-    #                 s = lorentzian.suma(s,y)
-    #                 c+=1 
-    #                 # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
-    #             else:
-    #                 # if c>0:
-    #                 #     plt.plot(x,s, label=(name, row[2]))
-                    
-    #                 #New metabolite begins
-    #                 print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
-    #                 y = lorentzian.loren(x,x0,gamma, area_r, concentration, total_area)
-    #                 s=y
-    #                 c=1
-                    
-    #             print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a width of ',gamma)
-    #             idd=row[0]
-    #             clusterr=row[2] 
-                
-    #             # plt.plot(x,y, label=(name, row[2]))#PLOT ALL THE PEAKS
-    #         plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/cluster
-    #         ss = lorentzian.suma(ss, s)#suma de clusters within compound 
-    #     plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
-        
-    #     ccc+=1
-    #     # #I want to check that the ints are 1
-    #     integration = np.trapz(ss,x)
-    #     integration_values.append(integration)
-    #     #CHECKPOINT 
-    #     if  concentration+0.00015 >= integration >= concentration-0.00015:
-    #         zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
-    #         print('True')
-        
-    #     plt.gca().invert_xaxis()
-    #     plt.xlabel('ppm')
-    #     plt.title('Clusters '+ name + ' '+ str(idd))
-    #     plt.grid(True)
-    #     plt.legend(loc='upper left') #'best', 'center right'
-    #     plt.show()#A PLOT SHOW PER METABOLITE
-    
-   
-        
-# # ----------------------------------------------------------------------
-    # |If you want to plot all peaks      
-    # def plot_peaks(groups_data):
-    #     name = 0  
-    #     # custom_cmap = matplotlib.colors.ListedColormap(['red','yellow','blue'])
-    #     # color = ['b','b','g','o','p','y','bl','w']
-    #     c = 0
-    #     fig, ax = plt.subplots()
-    #     #NEW PLOT PROCEDURE WITH THE DICT TO PLOT PEAKS
-    #     for key,value in groups_data.items():#each met
-    #         for key_cluster, list_peaks in value.items():#each cluster
-    #             for row in list_peaks:#inside cluster 
-                     
-    #                 if name == row[1]:
-    #                     c +=1
-    #                 #     color = color[c]
-                        
-    #                 else:
-    #                     print('\n','Your metabolite:', row[1], '\n')
-    #                     c=1
-    #                 #     color = color[c]
-    #                 name = row[1]
-    #                 x0 = row[4]
-    #                 gamma=row[5]
-    #                 print('Peak', c,' with a centre set on ', x0, 'ppm  and a width of ', gamma, 'ppm ')
-    #                 x = np.linspace(0, 10, 1000)
-    #                 y = lorentzian.loren(x,x0,gamma)
-    #                 ax.plot(x,y, label=(name, c) ) #'${name}$'.format(name=name))
-    #     ax.invert_xaxis()
-    #     ax.set_xlabel('ppm')
-    #     ax.set_title('Peaks ')
-    #     ax.grid(True)
-    #     ax.legend(loc='upper left') #'best', 'center right'
-    #     return fig
-
-    # peaks_fig = plot_peaks(groups_data)
-#  # ------------------------------------------------------------------------   
     
 
