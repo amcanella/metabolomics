@@ -112,7 +112,7 @@ def peaks_data(met_id):
                 suma+=area_peak #sum the areas of the different peaks already normalized
                 
                 #id, name of met, cluster number,   peak number,  centre,   width normalized , area , concentration of the sample in chenoMX 
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_peak, ref_concentration]) # mets_m[i-1,6] max conc in urine profiler
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_peak, ref_concentration, width_norm]) # mets_m[i-1,6] max conc in urine profiler
                 
         total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE mets, since it is mets data)
     return total_peaks,total_areas
@@ -222,8 +222,10 @@ def plot_compounds(dict_, iteration_number=1):
     clusterr=0
     idd=0
     s=0 #suma de picos
+    s_sol = 0 #suma de picos solution
     ss=0 #suma de clusters
     m=0 #suma de mets 
+    m_sol = 0 #suma of solutin mets 
     #CHECK FUNCT
     integration_values = []
     integration_values_sum = 0
@@ -233,6 +235,7 @@ def plot_compounds(dict_, iteration_number=1):
     
     for key,value in dict_.items():#each met
         ss=0 #reset suma de clusters within met
+        ss_sol = 0 #reset the solution of the suma of clusters 
         for key_cluster, list_peaks in value.items():#each cluster
             for row in list_peaks:#inside the cluster
                 
@@ -245,12 +248,13 @@ def plot_compounds(dict_, iteration_number=1):
                 gamma=row[5]
                 area_r = row[6]
                 concentration_ref = row[7]
-                x0 = row[8] 
+                fix_width = row[8]
+                x0 = row[9]
                 
                 #met variables 
                 total_area = mets_l[ccc][4]
                 concentration = mets_l[ccc][5] #TODO: add this wished concentration to the prompt input 
-                conc_solution_row[id_met-1] = concentration
+                conc_solution_row[id_met-1] = concentration #esto es parte del met, no del peak, osea que podria estar en el primer loop
                 
                 # x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
                 # x = np.linspace(0.04, 10, 32_768) #start, end, length variables 
@@ -264,6 +268,11 @@ def plot_compounds(dict_, iteration_number=1):
                     # Might work directly by writting in y, y+=?, no need of suma function?
                     y = lorentzian.loren(x,x0,gamma,area_r,concentration, concentration_ref)
                     s = lorentzian.suma(s,y)
+                    
+                    #SOLUTION SNIPPET
+                    y_sol = lorentzian.loren(x,old_centree,fix_width,area_r,concentration, concentration_ref)
+                    s_sol = lorentzian.suma(s_sol,y_sol)
+                    
                     c+=1 
                     # print('Peak',c,'with a centre of', x0, 'ppm and a with of ',gamma)
                 else:
@@ -274,6 +283,12 @@ def plot_compounds(dict_, iteration_number=1):
                     print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
                     y = lorentzian.loren(x,x0,gamma, area_r, concentration,concentration_ref)
                     s=y
+                    
+                    
+                    #SOLUTION SNIPPET 
+                    y_sol = lorentzian.loren(x,old_centree,fix_width,area_r,concentration, concentration_ref)
+                    s_sol = y_sol
+                    
                     c=1
                     
                 print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a concentration of ',concentration)
@@ -285,10 +300,12 @@ def plot_compounds(dict_, iteration_number=1):
                 #                                                         otherwise a mess if plot function at the end of all the loop  
             # plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/ each cluster
             ss = lorentzian.suma(ss, s)#suma de clusters within compound 
+            ss_sol = lorentzian.suma(ss_sol, s_sol)#suma de clusters within compound 
         # plot_funct(x, ss, name, clust_number, peak_number, idd)
         # plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
         # plot_funct(x, ss, name, 'suma', idd, idd)
         m = lorentzian.suma(m, ss)
+        m_sol = lorentzian.suma(m_sol, ss_sol)
         
         #add one to the index counter
         ccc+=1
@@ -302,7 +319,7 @@ def plot_compounds(dict_, iteration_number=1):
             print('True')
         indexes = str(list(new_dict.keys()))
         integration_values_sum += integration_values[-1]
-        int_total_area += total_area * concentration #the area of each met * the concentration of each met
+        int_total_area += total_area * concentration / concentration_ref #the area of each met * the concentration of each met AND NOW DIVIDED BY REFERENCE SINCE I TOOK IT AWAY FROM THE AREA CALCULATION
     # TODO: ADD NOISE HERE para cada uno de los 
     #TODO: make a noise function
     mu= 0 
@@ -314,10 +331,14 @@ def plot_compounds(dict_, iteration_number=1):
     m1 = m/integration_values_sum #this is to prove that is the almost the same as int_total_area
     m2 = m/int_total_area
     m3 = m_noise/integration_m_noise
+    #m_sol_n = m_sol/int_total_area  #TOTALLY WORKS BUT MORE PRECISE WITH INTEGRAL 
+    m_sol_n = m_sol/np.trapz(m_sol, x) #normalize by dividing by integral 
+    
     integration_total = np.trapz(m,x) #this is the same almost as int_total_area
     integration_total_2 = np.trapz(m1,x)
     integration_total_3 = np.trapz(m2,x)
     integration_total_4 = np.trapz(m3,x)
+    integration_total_5 = np.trapz(m_sol_n,x)
     
     #Add date and time 
     current_datetime= datetime.datetime.now()
@@ -358,10 +379,11 @@ def plot_compounds(dict_, iteration_number=1):
     m3[ 28031 :] = 0
     
     
-    
+    plt.plot(x,m_sol_n, 'b', label = ('REFERENCE')) 
     plt.plot(x,m3, 'g', label = ('ALL COMPOUNDS'))    
     # plt.plot(x,m1, 'r', label = ('ALL COMPOUNDS'))    
     # plt.plot(x,m2, 'b', label = ('ALL COMPOUNDS'))    
+     
     plt.gca().invert_xaxis()
     plt.xlabel('ppm')
     plt.title(f'All compounds {indexes} {f_datetime}')
@@ -369,7 +391,7 @@ def plot_compounds(dict_, iteration_number=1):
     plt.legend(loc='upper left') #'best', 'center right'
     plt.show()#A PLOT SHOW PER METABOLITE
 
-    return m3, conc_solution_row
+    return m3, conc_solution_row, m_sol_n
 
  
 
@@ -377,9 +399,10 @@ if __name__ == "__main__":
     
     start = time.perf_counter()
     
-    instances = 10
+    instances = 2
     result = [0]*instances
     conc_solution = [0]*instances
+    m_alineado = [0]*instances
   
     for i in range(instances):   
         #Change the indexes to the metabolites you would like to see plot 
@@ -403,16 +426,17 @@ if __name__ == "__main__":
         # ---------------I THINK WE CAN START THE FOR LOOP FROM HERE 
         new_dict = addShift(peaks_dict_copy) #Llamar al copy, sino se produce el cambio en v 
         
-        result[i], conc_solution[i] = plot_compounds(new_dict) #, iter_)
+        result[i], conc_solution[i], m_alineado[i]= plot_compounds(new_dict) #, iter_)
         
     #Current date and time
     current_datetime= datetime.datetime.now()
     f_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     
     # np.savetxt(f'input_{f_datetime}.txt', result, delimiter=' ')   
-    np.savetxt(f'input_1.txt', result, delimiter=' ')   
+    np.savetxt(f'x.txt', result, delimiter=' ')   
     
-    np.savetxt(f'ymet.txt', conc_solution, delimiter=' ')   
+    np.savetxt(f'y_met.txt', conc_solution, delimiter=' ')   
+    np.savetxt(f'y_alineado.txt', m_alineado, delimiter=' ')   
         
     end = time.perf_counter()
     
