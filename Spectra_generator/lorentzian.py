@@ -45,6 +45,15 @@ def gaussian(mu, sigma):
     return random.gauss(mu, sigma)
 
 
+def ranges(a):
+    
+    a[: 5557] = 0
+    a[16107 : 16692] = 0
+    a[ 28031 :] = 0
+    
+    return a
+
+
 # # #define the parameters here for now 
 # x01= 3.24 #centre
 # gamma1 = 0.02 #width

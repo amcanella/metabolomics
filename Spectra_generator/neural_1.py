@@ -13,11 +13,11 @@ from sklearn.metrics import auc
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-ndata = 10
+ndata = 1000
 nfreq = 32768
-x = np.loadtxt('I:\\a\\espectros\\prueba\\alonso\\x.txt', dtype = 'float64')
+x = np.loadtxt('x.txt', dtype = 'float64')
 x = x.reshape(ndata, nfreq, 1)
-y = np.loadtxt('I:\\a\\espectros\\prueba\\alonso\\yalinear.txt', dtype = 'float64')
+y = np.loadtxt('y_alineado.txt', dtype = 'float64')
 y = y.reshape(ndata, nfreq, 1)
 
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.5)

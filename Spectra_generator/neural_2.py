@@ -13,13 +13,13 @@ from sklearn.metrics import auc
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-ndata = 10
+ndata = 1000
 nfreq = 32768
-nmet = 3
-x = np.loadtxt('I:\\a\\espectros\\prueba\\alonso\\x.txt', dtype = 'float64')
+nmet = 26
+x = np.loadtxt('x.txt', dtype = 'float64')
 x = x.reshape(ndata, nfreq, 1)
-y = np.loadtxt('I:\\a\\espectros\\prueba\\alonso\\ymet.txt', dtype = 'float64')
-y = y.reshape(ndata, nfreq, 1)
+y = np.loadtxt('y_met.txt', dtype = 'float64')
+y = y.reshape(ndata, nmet, 1)
 
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.5)
 
