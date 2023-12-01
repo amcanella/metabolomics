@@ -20,12 +20,12 @@ def loren(x,x0,gamma,area_n,conc, conc_ref):
     #WE WILL HAVE TO MULTIPLY THE AREA TO THIS WHEN WE KNOW THE RIGHT ONE
     # return (gamma/(np.pi*(gamma**2+(x-x0)**2)))
     # return (conc*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2)))/t_area
-    return ((conc/conc_ref)*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2)))
+    return ((conc/conc_ref)*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2))) #las con/con_ref se podrian hacer al final del met
 
 #define the x axis 
 # x = np.linspace(10, 0, 1000)
 
-#function to set the width: normalize and add variation to the widths 
+#function to normalize and add variation to the widths 
 #Normalize the widths of the spectra
 def width_set(valor):
     

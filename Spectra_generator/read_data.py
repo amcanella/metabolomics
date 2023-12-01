@@ -25,61 +25,33 @@ path = 'C:/txts/Copia de Metabo_tables_10.xlsx'
 # path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables_3.xlsx"
 
 #Read data from excel 
-#Use the excel file line to not read the excel everytime you read a sheet , TODO: use iterators for one time read??? ONly 40 KB in memory
+#Use the excel file line to not load the excel everytime you read a sheet , TODO: ADD THIS TO MAIN 
 xls = pd.ExcelFile(path)
 mets_x = pd.read_excel(xls, 'Mets', header=0)
 clust_x = pd.read_excel(xls, 'Clusters')
 peaks_x = pd.read_excel(xls, 'Peaks')
-
-# data = pd.read_csv(path,"\t" , header = 1)
-# print('DATA ISSS \n', mets_x)
 
 #Store data in a matrix 
 mets_m = mets_x.values
 clust_m = clust_x.values 
 peaks_m = peaks_x.values
 
-#Collect the data necessary for the lorentzian
-# we need the centre of the cluster, width of the cluster although could be various, centre of the peak and width,
-#in order to do this, we need to calle the function with a name or id of metabolite and we get all the data about it
 
+# we need the centre of the cluster, centre of the peak and width,
+#in order to do this, we need to call the function with a name or id of metabolite and we get all the data about it
+#Collect the necessary cluster data 
 def cluster_data(met_id):#TODO: try to be consistent and name functions with the same case 
-        # Init variables 
-        # centre_clust = 0
-        # width_clust = 0
-        # name_met = 0
-        
-    # In the case of an array with numbers only 
-    # a = np.array(peaks_m[:,1])
-    # where = np.where(a==2)
-    
-    #id = [3,4] #para cuando queramos plotear varios metabolitos a la vez
+
     total_clusters = [] #Init list 
     for i in met_id:
         for row in clust_m:
-            if len(row)>0 and row[0]==i: #and len(row)>=7: #length of the row is 9 elements, just preventive
+            if len(row)>0 and row[0]==i: #length of the row is 9 elements, just preventive, use while
                 # width_n=lorentzian.norm(row[8]) #Commented until all values stored in excel #NORMALIZE the widths, it comes in MHzs
-            #id of met, name, number of clusters, cluster number, reference concentration, centre of cluster, width of cluster, number of Hs, rango 0, rango 1
+                                #id of met, name, number of clusters, cluster number, reference concentration?in mets, centre of cluster, width of cluster, number of Hs?out, rango 0, rango 1
                 total_clusters.append([i, mets_m[i-1,1],  mets_m[i-1,4], row[1], mets_m[i-1,5], row[6], row[8], row[4], row[2],row[3]])
-
-        # indexes = clust_m[:,0]#we could avoid this step and store the whole row into f, but maybe to messy
-        # f = np. where(indexes == i)[0] #This [0] makes an array
-    
-    # if (clust_m[:,0] == id):
-    #centre and width of the cluster
-    # centre = clust_m[f,6]
-    # width = clust_m[f,6]
     
     return total_clusters 
 
-
-
-    #return name_met, centre_clust, width_clust, where 
-
-#Separate the different values of the columns 
-# metabolitess = mets[:,0]
-# clusterss = mets[:,1]
-# peaksss = mets[:, 2:7]
 
 #Collects the peaks information
 def peaks_data(met_id):
@@ -103,16 +75,18 @@ def peaks_data(met_id):
                 else:
                     print('False')
                     # raise ValueError('width variation out of range ')
+                    
                 #2. NORMANILIZE area, not anymore, AREA AND CONCENTRATION GO DIFFERENT WAYS 
                 area_peak = row[6]
-                ref_concentration=mets_m[i-1,5] #concentration stored in the chenomx 
+                # ref_concentration=mets_m[i-1,5] #concentration stored in the chenomx 
                 # area_norm = area_peak/ref_concentration
+                
                 #3. GET THE TOTAL AREA OF THE MET BY ADDING ALL THE PEAKS 
                 # suma+=area_norm #sum the areas of the different peaks already normalized
-                suma+=area_peak #sum the areas of the different peaks already normalized
+                suma+=area_peak #sum the areas of the different peaks
                 
-                #id, name of met, cluster number,   peak number,  centre,   width normalized , area , concentration of the sample in chenoMX , width without variation 
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_peak, ref_concentration, width_norm]) # mets_m[i-1,6] max conc in urine profiler
+                #id, name of met, cluster number,   peak number,  centre,   width normalized&var, area, width without variation 
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_peak, width_norm]) # mets_m[i-1,6] max conc in urine profiler
                 
         total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE mets, since it is mets data)
     return total_peaks,total_areas
@@ -128,14 +102,14 @@ def mets_data(mets_id, areas):
                 # concentration = [desired_con_1, ..] 
                 #mitad= row[6]/2 #Otra forma de hacerlo seria utilizando la gaussiana
                 #concentration = lorentzian.gaussian(mitad, mitad)
-                # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET, rd concentration within ranges
+                # id number of met, name of met, sample concentratio in ChenoMx, MAX urine concentration, TOTAL AREA OF MET, WISHED (rd concentration within ranges)
                 total_mets.append([i,row[1],row[5], row[6], areas[c], concentration])
         c+=1
     return total_mets
 
 # Function that saves a list into a dict by met ID and cluster number 
 def saveInDict(lista):
-    #Define dictionary to arrange the peaks of each cluster
+    #Define dictionary 
     # groups_data = defaultdict(list)
     groups_data = {}
     # ---------------------------------------------------
@@ -160,11 +134,10 @@ def saveInDict(lista):
         
     return groups_data
 
-#NEW FUNCTION TO STORE THE NEW CENTRE OF PEAKS RELATION, AS AN APPEND OF EACH LINE OF NEW DICT
+#Function that appends a new peak centre within pH 7 
 def addShift(d):
     
-    #we need to have a vector with all the shifted centres, I would not
-    # change it directly in w because I think it is good to keep the reference of pH 7 
+    #I would not change it directly in peaks_dict because I think it is good to keep the reference of pH 7 
  
     for row in cluster_l:
         met = row[0]
@@ -215,9 +188,9 @@ def plot_funct(x,y,name,texto,number,idd):
 def plot_compounds(dict_, iteration_number=1):
        
    
-    # NEW PLOT TO PLOT CLUSTERS
+    # Init variables 
     name = 0  
-    c = 0 #Peak Counter
+    c = 0 #Peak Counter, keep track of the peak sequence 
     ccc = 0 #MET counter 
     clusterr=0
     idd=0
@@ -247,11 +220,12 @@ def plot_compounds(dict_, iteration_number=1):
                 old_centree=row[4]
                 gamma=row[5]
                 area_r = row[6]
-                concentration_ref = row[7]
-                fix_width = row[8]
-                x0 = row[9]
-                
+                fix_width = row[7]
+                x0 = row[8] #new centre
+                        # i WAS DOING THIS TO PLOT AND SEE PROGRESS                 #THIS INDEED MAKES SENSE
+                #TODO: 1. SUM ALL THE PEAKS BY METS ONLY, NO NEED TO SEP CLUSTS, 2. MAKE MATRIX MULT TIMES CONCENT AT THE END
                 #met variables 
+                concentration_ref = mets_l[ccc][2]
                 total_area = mets_l[ccc][4]
                 concentration = mets_l[ccc][5] #TODO: add this wished concentration to the prompt input 
                 conc_solution_row[id_met-1] = concentration #esto es parte del met, no del peak, osea que podria estar en el primer loop
@@ -261,7 +235,7 @@ def plot_compounds(dict_, iteration_number=1):
                 x = np.linspace(-1.997, 12.024, 32_768) #start, end, length variables 
                 
 
-                shift2 = x0 - old_centree  #this is done to compare the shifts in every cluster
+                shift2 = x0 - old_centree  #this is done to compare and check the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
                     
@@ -269,7 +243,7 @@ def plot_compounds(dict_, iteration_number=1):
                     y = lorentzian.loren(x,x0,gamma,area_r,concentration, concentration_ref)
                     s = lorentzian.suma(s,y)
                     
-                    #SOLUTION SNIPPET
+                    #NN SOLUTION SNIPPET
                     y_sol = lorentzian.loren(x,old_centree,fix_width,area_r,concentration, concentration_ref)
                     s_sol = lorentzian.suma(s_sol,y_sol)
                     
@@ -320,7 +294,7 @@ def plot_compounds(dict_, iteration_number=1):
         indexes = str(list(new_dict.keys()))
         integration_values_sum += integration_values[-1]
         int_total_area += total_area * concentration / concentration_ref #the area of each met * the concentration of each met AND NOW DIVIDED BY REFERENCE SINCE I TOOK IT AWAY FROM THE AREA CALCULATION
-    # TODO: ADD NOISE HERE para cada uno de los 
+    # TODO: ADD NOISE HERE, missing cadenas de proteinas later on 
     #TODO: make a noise function
     mu= 0 
     sigma = 0.0001
@@ -328,9 +302,9 @@ def plot_compounds(dict_, iteration_number=1):
     noise = np.random.normal(mu, sigma, len(m))
     m_noise = m + noise
     integration_m_noise = np.trapz(m_noise,x)
-    m1 = m/integration_values_sum #this is to prove that is the almost the same as int_total_area
+    m1 = m/integration_values_sum #this is to prove that is  almost the same as int_total_area
     m2 = m/int_total_area
-    m3 = m_noise/integration_m_noise
+    m3 = m_noise/integration_m_noise #normalize function by dividing by integral of signal with noise
     #m_sol_n = m_sol/int_total_area  #TOTALLY WORKS BUT MORE PRECISE WITH INTEGRAL 
     m_sol_n = m_sol/np.trapz(m_sol, x) #normalize by dividing by integral 
     
@@ -355,54 +329,24 @@ def plot_compounds(dict_, iteration_number=1):
     # m_sol_n[16107 : 16692] = 0
     # m_sol_n[ 28031 :] = 0
     
-    #NORMALIZE THE CONCENTRATION VALUES 
-    conc_solution_row =  [ value / sum(conc_solution_row) for value in conc_solution_row]
+    # NORMALIZE THE CONCENTRATION VALUES 
+    # conc_solution_row =  [ value / sum(conc_solution_row) for value in conc_solution_row]
     # checkout= sum(conc_solution_row) #ALWAYS 1
+    # "s = np.sum(yp, axis = 1).reshape((1000, 1))\n",
+    # "yp = yp / s\n",
     
     
-    # with open ("function_values_"+f_datetime+"_"+str(iter_)+".txt", "w") as file:
-    # with open ("function_values3"+".txt", "w") as file:
-    #     r = 0
-    #     file.write(str(indexes) +"  " +"\n"+ f"{mu} "+ f"{sigma}"+"\n")
-    #     for value in m3: 
-    #         file.write(f"{x[r]} " + f" {value}"+"\n")
-    #         r+=1
-            
-    # file.close() #no need to close, the with statement takes care of it to ensure changes saves and resources released 
-    
-    # fig, ax = plt.subplots(4,1)
-    
-    # ax[0].plot(x,m_noise, 'g', label = ('ALL COMPOUNDS'))    
-    # ax[0].set_title('All compounds '+ indexes)
-    # ax[0].grid(True)
-    # ax[0].invert_xaxis()
-    
-    
-    # ax[1].plot(x,m1, 'r', label = ('ALL COMPOUNDS'))
-    # ax[1].grid(True)  
-    # ax[1].invert_xaxis()
-    
-    # ax[2].plot(x,m2, 'b', label = 'ALL COMPOUNDS')    
-    # ax[2].grid(True) 
-    # ax[2].invert_xaxis()
-    
-    # ax[3].plot(x,m3, 'm', label = 'ALL COMPOUNDS')    
-    # ax[3].grid(True) 
-    # ax[3].invert_xaxis()
-    
-
-    
-    # plt.plot(x,m_sol_n, 'b', label = ('REFERENCE')) 
-    # plt.plot(x,m3, 'g', label = ('ALL COMPOUNDS'))    
-    # # plt.plot(x,m1, 'r', label = ('ALL COMPOUNDS'))    
-    # # plt.plot(x,m2, 'b', label = ('ALL COMPOUNDS'))    
+    plt.plot(x,m_sol_n, 'b', label = ('REFERENCE')) 
+    plt.plot(x,m3, 'g', label = ('shift'))    
+    # plt.plot(x,m1, 'r', label = ('ALL COMPOUNDS'))    
+    # plt.plot(x,m2, 'b', label = ('ALL COMPOUNDS'))    
      
-    # plt.gca().invert_xaxis()
-    # plt.xlabel('ppm')
-    # plt.title(f'All compounds {indexes} {f_datetime}')
-    # plt.grid(True)
-    # plt.legend(loc='upper left') #'best', 'center right'
-    # plt.show()#A PLOT SHOW PER METABOLITE
+    plt.gca().invert_xaxis() # plt.xlim(12, -1)
+    plt.xlabel('ppm')
+    plt.title(f'All mets {indexes} {f_datetime}')
+    plt.grid(True)
+    plt.legend(loc='upper left') #'best', 'center right'
+    plt.show()#A PLOT SHOW PER METABOLITE
 
     return m3, conc_solution_row, m_sol_n
 
@@ -412,27 +356,26 @@ if __name__ == "__main__":
     
     start = time.perf_counter()
     
-    instances = 10
+    instances =  10
     result = [0]*instances
     conc_solution = [0]*instances
     m_alineado = [0]*instances
   
+    #TODO: Restructure, I would store all the values in a list and make a dict with all of them, no need to call them every time we run and the for loop woulg go lower then :D
     for i in range(instances):   
         #Change the indexes to the metabolites you would like to see plot 
         #Create a rd function to select a number of mets and another to select which
-        input_met = [3,4,5] #TODO: add a input() to add mets or retrieve mets randomly from list?
+        input_met = [3,4,5] #TODO: add a input() to add mets or retrieve mets randomly from list? Naa... would be cool but we need to call this automatically
+        
         #Store the data from the matrixes in a variable
-        cluster_l = cluster_data(input_met)#Collects the cluster info from the demanded mets  
-        peaks_l , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets, the total areas is to sum the peaks areas (not need anymore since integration)
-        mets_l = mets_data(input_met, t_areas) #Collects the mets info and and the total area normalized 
-        #TODO: divide total area for each lorentzian  DONE 
-        #TODO: CONCENTRATION OF METABOLITE is correct on the peaks and give a random
-        # within range 
+        cluster_l = cluster_data(input_met)#Collects the cluster info from the demanded mets into this list
+        peaks_l , t_areas = peaks_data(input_met) #Collects the peaks info from the demanded mets, the total areas is to sum the peaks areas (no need anymore since integration)
+        mets_l = mets_data(input_met, t_areas) #Collects the mets info and and the total area normalized into this list
+        
         #TODO:variate the width of the peaks within a gaussians, there are different variations, some repeated 
         # less frequently than others, we gotta see this recurrency 
-        
-        
-        # Store the list in a dictionary 
+
+         # Store the list in a dictionary 
         peaks_dict = saveInDict(peaks_l)
         peaks_dict_copy = deepcopy(peaks_dict) #A shallow copy should not affect since we are adding a new value, not modifying, but it seems to append it
         
@@ -447,10 +390,10 @@ if __name__ == "__main__":
     # folder_path = 'C:/Repos/Metabolomics/Spectra_generator/result_'+f_datetime+'/'
     
     # np.savetxt(f'input_{f_datetime}.txt', result, delimiter=' ')   
-    np.savetxt(f'x.txt', result, delimiter=' ')   
+    np.savetxt(f'x_{instances}.txt', result, delimiter=' ')   
     
-    np.savetxt(f'y_met.txt', conc_solution, delimiter=' ')   
-    np.savetxt(f'y_alineado.txt', m_alineado, delimiter=' ')   
+    np.savetxt(f'y_met_{instances}.txt', conc_solution, delimiter=' ')   
+    np.savetxt(f'y_alineado_{instances}.txt', m_alineado, delimiter=' ')   
         
     end = time.perf_counter()
     
