@@ -8,6 +8,8 @@ import pandas as pd
 import math
 import numpy as np 
 import random 
+import csv
+import matplotlib.pyplot as plt 
 
 class process_data:
     
@@ -84,10 +86,11 @@ class Simulator:
             met_id = row[0]
             
             #cluster ranges
-            rango0=row[2]  #0
-            rango1=row[3]  #0.04
-            sigma = (rango1 - rango0)/2 #0.02 
-            
+            rango0=row[2]  #before it used to be 0
+            rango1=row[3]  #before it used to be 0.04
+            print(rango0, rango1)
+            sigma = np.abs((rango1 - rango0)/2) #0.02 
+            print(sigma)
             clust_centre = row[5]
             
             new_centre = random.gauss(clust_centre, sigma)
@@ -114,18 +117,31 @@ class Simulator:
     def ranges(self, a):
     
         a[: 5557] = 0
-        a[16107 : 16692] = 0
+        a[16107 : 16692] = 0 #Dividir dos espectros?
         a[ 28031 :] = 0
-        return a
+        b = a[5557:28030] #Cutting zeros tails 
+        # a[24293:32652] = 0
+        return b
     
+    def csv_gen(self, csv_name, points, matrix):
+         
+         titles =[f'V{i}' for i in range(0, points)]
+         with open(csv_name, 'w', newline='') as csvfile:
+             csv_writer=csv.writer(csvfile)
+             csv_writer.writerow(titles)
+             csv_writer.writerows(map(np.ndarray.tolist, matrix)) if isinstance(matrix[0], np.ndarray) else  csv_writer.writerows(matrix)#applying map function to iterable
+
    
     def constructor(self, mets, noise):
             #Add the shift and the width variations and plot
             d = self.dictionary
             shifts = self.set_new_centre(self.clust_data)
             x = np.linspace(-1.997, 12.024, 32_768)
+            # x = np.linspace(0.04, 10, 52_234)
             raw_spect = 0
             conc_solution_row = [0]*len(self.met_data)
+            
+            alig_spect = 0
             
             for m in mets:
                 concentration_urine =  self.met_data[m-1][6]
@@ -138,7 +154,8 @@ class Simulator:
                 for key, value in d[m].items():
 
                     for row in value:
-
+                        
+                        centre = row[4]
                         shift = shifts[m-1][key]
                         new_centre = row[4] + shift
 
@@ -154,17 +171,29 @@ class Simulator:
                         #call the lorentzian
                         raw_spect += self.lorentzian(x,x0,gamma,area,conc, conc_ref)
                         
+                        #ALIGNED
+                        #alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
             #Add noise           
             noise = np.random.normal(0, noise, len(raw_spect))
             spect_noise = raw_spect + noise
+            
+            #a_spect_noise = alig_spect + noise
                         
+            #Add the zero areas or cut
+            spect_cut = self.ranges(spect_noise)
+            
+            # a_spect_cut = self.ranges(a_spect_noise)
+            
             #Normalize to 1
-            integral = np.trapz(spect_noise,x)
-            spect = spect_noise/integral
-
+            new_x = np.linspace(0.3807, 9.9946, 22_473)
+            integral = np.trapz(spect_cut, new_x)
+            spect = spect_cut/integral
             
-            #Add the zero areas
-            spect = self.ranges(spect)
+            # plt.plot(new_x, spect)
+            # plt.xlim(10, 0)
+            # plt.show()
+            # a_integral = np.trapz(a_spect_cut, new_x)
+            # a_spect = a_spect_cut/a_integral
             
-            return spect, conc_solution_row
+            return spect, conc_solution_row #, a_spect
     
