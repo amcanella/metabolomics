@@ -88,9 +88,9 @@ class Simulator:
             #cluster ranges
             rango0=row[2]  #before it used to be 0
             rango1=row[3]  #before it used to be 0.04
-            print(rango0, rango1)
+            #print(rango0, rango1)
             sigma = np.abs((rango1 - rango0)/2) #0.02 
-            print(sigma)
+            #print(sigma)
             clust_centre = row[5]
             
             new_centre = random.gauss(clust_centre, sigma)
@@ -116,9 +116,9 @@ class Simulator:
     #Make the zero areas
     def ranges(self, a):
     
-        a[: 5557] = 0
-        a[16107 : 16692] = 0 #Dividir dos espectros?
-        a[ 28031 :] = 0
+        # a[: 5557] = 0
+        # a[16107 : 16692] = 0 #Dividir dos espectros?
+        # a[ 28031 :] = 0
         b = a[5557:28030] #Cutting zeros tails 
         # a[24293:32652] = 0
         return b
@@ -172,17 +172,17 @@ class Simulator:
                         raw_spect += self.lorentzian(x,x0,gamma,area,conc, conc_ref)
                         
                         #ALIGNED
-                        #alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
+                        alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
             #Add noise           
             noise = np.random.normal(0, noise, len(raw_spect))
             spect_noise = raw_spect + noise
             
-            #a_spect_noise = alig_spect + noise
+            a_spect_noise = alig_spect + noise
                         
             #Add the zero areas or cut
             spect_cut = self.ranges(spect_noise)
             
-            # a_spect_cut = self.ranges(a_spect_noise)
+            a_spect_cut = self.ranges(a_spect_noise)
             
             #Normalize to 1
             new_x = np.linspace(0.3807, 9.9946, 22_473)
@@ -192,8 +192,9 @@ class Simulator:
             # plt.plot(new_x, spect)
             # plt.xlim(10, 0)
             # plt.show()
-            # a_integral = np.trapz(a_spect_cut, new_x)
-            # a_spect = a_spect_cut/a_integral
+            #ALIGNED
+            a_integral = np.trapz(a_spect_cut, new_x)
+            a_spect = a_spect_cut/a_integral
             
-            return spect, conc_solution_row #, a_spect
+            return spect, conc_solution_row, a_spect
     

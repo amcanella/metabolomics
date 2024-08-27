@@ -9,9 +9,8 @@ from simulator import process_data
 from simulator import Simulator
 import time 
 
-p = process_data('C:/txts/Metabo_tables_14.xlsx')
+p = process_data('C:/Repos/txts/Metabo_tables_14.xlsx')
 d = p.create_dict()
-
 s = Simulator(dictionary = d, met_data=p.met_data, clust_data = p.clust_data)
 
 print(f'this is a test {p.met_data[0][6]}')
@@ -19,12 +18,12 @@ print(f'this is a test {p.met_data[0][6]}')
 NFREQ = 22_473 #ZEROS REMOVED 32_768 #52_234 #32768
 SAMPLES = 10_000
 #NO UREA
-mets = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,61,62,63, 65,66,67] #np.arange(1,26) #[3,4,5]
+mets = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,61,62,63,65,66,67] #np.arange(1,26) #[3,4,5]
 # mets = [3,4,5]
 nmet = len(mets)
 noise = 0.0001
 
-for j in range(1,10):
+for j in range(10,30):
     
     print(j)
     spectrum = [0]*SAMPLES
@@ -37,18 +36,19 @@ for j in range(1,10):
         if i == SAMPLES/2:
             print(f'\n {i} We are half way through!')
           
-        spectrum[i], conc[i] = s.constructor(mets, noise)  #, aligned[i]
+        spectrum[i], conc[i], aligned[i] = s.constructor(mets, noise)  #, aligned[i]
         
     end =  time.perf_counter()
     timer = (end - start )/60
     
     print(f'\nDone with simulating! Time: {timer}')
     
-    # s.csv_gen( f'x_{SAMPLES}_{nmet}_{NFREQ}_{j}.csv', NFREQ, spectrum)
-    # s.csv_gen( f'y_met_{SAMPLES}_{nmet}_{NFREQ}_{j}.csv', 67, conc) #leave as 67
-
+    # s.csv_gen( f'aligned/x_{SAMPLES}_{nmet}_{NFREQ}_{j}_GLYBIEN.csv', NFREQ, spectrum)
+    # s.csv_gen( f'aligned/y_met_{SAMPLES}_{nmet}_{NFREQ}_{j}_GLYBIEN.csv', 67, conc) #leave as 67
+    
+    # s.csv_gen( f'aligned/y_aligned_{SAMPLES}_{nmet}_{NFREQ}_{j}_GLYBIEN.csv', NFREQ, aligned)
     print('----------------------------------------------------')
-# s.csv_gen( f'y_aligned_{SAMPLES}_{nmet}_{NFREQ}_44.csv', NFREQ, aligned)
+    
 
 
 
