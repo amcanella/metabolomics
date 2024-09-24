@@ -59,15 +59,31 @@ class process_data:
                 peak_dict[key][key_2].append(row) 
         return peak_dict
     
+    def clust_dict(self):
+        
+        clust_d = {}
 
+        for row in self.clust_data:
+          
+          key = row[0]
+          
+          if key not in clust_d:
+            clust_d[row[0]] = [list(row)]
+          else:
+            clust_d[row[0]].append(list(row))
+        
+        return clust_d
+    
+    
 
 class Simulator:
     
-    def __init__(self, *, dictionary = {}, met_data, clust_data):
+    def __init__(self, *, dictionary = {}, met_data, clust_data, clust_dict):
         
         self.dictionary = dictionary
         self.met_data = met_data
         self.clust_data = clust_data
+        self.clust_dict = clust_dict
         
         
     #Vary the width
@@ -131,12 +147,55 @@ class Simulator:
              csv_writer.writerow(titles)
              csv_writer.writerows(map(np.ndarray.tolist, matrix)) if isinstance(matrix[0], np.ndarray) else  csv_writer.writerows(matrix)#applying map function to iterable
 
-   
+    def spur_gen(self,start, end, points):
+    
+        peaks = 0
+        lor = 0
+        x_new = np.linspace(start, end, points) #np.linspace(0.3807, 9.9946, 22473)
+        
+        while peaks < 21:
+            
+          sample_met = random.sample(list(range(1, 64)) + list(range(65, 68)), 1)[0]
+          # print(sample_met)  
+          
+          while True:
+            centre = random.gauss(5, 5)
+            if 0.3807 <= centre <= 9.9946: #add limits within cut so more challenging for the model
+              x_rd = centre
+              # print(f'centre random {x_rd}')
+              break
+          conc = random.uniform(0, self.met_data[sample_met-1][6]) #max urine concentration 
+          conc_ref = self.met_data[sample_met-1][5] #concentration reference
+        
+          cluster = random.sample(range(1, len(self.dictionary[sample_met])+1), 1)[0] #pick one cluster
+          peaks += len(self.dictionary[sample_met][cluster])
+          # print(f'numero de picos {peaks}')
+        
+          for value in self.dictionary[sample_met][cluster]:
+            #print(value)
+            
+            centre_clust = self.clust_dict[sample_met][cluster-1][5]
+            #print(f'centre cluster {centre_clust}')
+            diff = centre_clust - x_rd
+            #print(f'diff {diff}') 
+            x0 = value[4] - diff #centreSPUR(value[4], x_rd) #value[4]
+            
+            gamma = self.set_width(value[5])
+            area = value[6]
+            # print(x0, gamma, area, conc, conc_ref)
+            lor += self.lorentzian(x_new, x0, gamma, area, conc, conc_ref)
+        
+        return lor
+    
+    
     def constructor(self, mets, noise):
             #Add the shift and the width variations and plot
             d = self.dictionary
             shifts = self.set_new_centre(self.clust_data)
-            x = np.linspace(-1.997, 12.024, 32_768)
+            start = -1.997
+            end = 12.024
+            points = 32_768
+            x = np.linspace(start, end, points)
             # x = np.linspace(0.04, 10, 52_234)
             raw_spect = 0
             conc_solution_row = [0]*len(self.met_data)
@@ -175,9 +234,11 @@ class Simulator:
                         alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
             #Add noise           
             noise = np.random.normal(0, noise, len(raw_spect))
-            spect_noise = raw_spect + noise
+            spur = self.spur_gen(start, end, points)
             
-            a_spect_noise = alig_spect + noise
+            spect_noise = raw_spect + noise + spur
+            
+            a_spect_noise = alig_spect + noise + spur
                         
             #Add the zero areas or cut
             spect_cut = self.ranges(spect_noise)
@@ -189,9 +250,16 @@ class Simulator:
             integral = np.trapz(spect_cut, new_x)
             spect = spect_cut/integral
             
+            # plt.figure()
             # plt.plot(new_x, spect)
-            # plt.xlim(10, 0)
             # plt.show()
+            
+            plt.figure()
+            plt.plot(x, spect_noise, label = ' Spect')
+            plt.plot(x, spur, label = 'spur')
+            plt.legend()
+            plt.xlim(10, 0)
+            plt.show()
             #ALIGNED
             a_integral = np.trapz(a_spect_cut, new_x)
             a_spect = a_spect_cut/a_integral

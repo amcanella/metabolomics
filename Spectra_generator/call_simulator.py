@@ -9,21 +9,21 @@ from simulator import process_data
 from simulator import Simulator
 import time 
 
-p = process_data('C:/Repos/txts/Metabo_tables_14.xlsx')
+p = process_data('C:/txts/Metabo_tables_14.xlsx')
 d = p.create_dict()
-s = Simulator(dictionary = d, met_data=p.met_data, clust_data = p.clust_data)
+s = Simulator(dictionary = d, met_data=p.met_data, clust_data = p.clust_data, clust_dict=p.clust_dict())
 
 print(f'this is a test {p.met_data[0][6]}')
 
 NFREQ = 22_473 #ZEROS REMOVED 32_768 #52_234 #32768
-SAMPLES = 10_000
+SAMPLES = 1
 #NO UREA
 mets = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,61,62,63,65,66,67] #np.arange(1,26) #[3,4,5]
 # mets = [3,4,5]
 nmet = len(mets)
 noise = 0.0001
 
-for j in range(10,30):
+for j in range(10,11):
     
     print(j)
     spectrum = [0]*SAMPLES
