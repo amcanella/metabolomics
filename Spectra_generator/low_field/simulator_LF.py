@@ -136,6 +136,8 @@ class Simulator:
         # a[16107 : 16692] = 0 #Dividir dos espectros?
         # a[ 28031 :] = 0
         # b = a[5557:28030] #high field
+        
+        a[32700:32850] = 0 #WATER SIGNAL TO 0
         b = a[20557:43679] #Cutting zeros tails low field, [-1, 10]
         # a[24293:32652] = 0
         return b
@@ -199,15 +201,16 @@ class Simulator:
             x = np.linspace(start, end, points)
             # x = np.linspace(0.04, 10, 52_234)
             raw_spect = 0
-            conc_solution_row = [0]*len(self.met_data)
+            conc_solution_row = []#*len(mets) #self.met_data)
             
             alig_spect = 0
             
             for m in mets:
                 concentration_urine =  self.met_data[m-1][6]
-                wished = random.uniform(0, concentration_urine)
+                identicator = random.choices([0, 1], weights=[10, 90], k=1)[0] #store in variable the number to multiply the concentrations to make sure we have 0 concentrations
+                wished = random.uniform(0, concentration_urine)*identicator
 
-                conc_solution_row[m -1] = wished
+                conc_solution_row.append(wished) #[m -1] = wished
                 
                 con_reference = self.met_data[m-1][5]
                 # print(m)
@@ -255,19 +258,32 @@ class Simulator:
             integral = np.trapz(spect_cut, new_x)
             spect = spect_cut/integral
             
+            #ALIGNED
+            a_integral = np.trapz(a_spect_cut, new_x)
+            a_spect = a_spect_cut/a_integral
+            
             # plt.figure()
             # plt.plot(new_x, spect)
             # plt.show()
             
             # plt.figure()
-            # plt.plot(new_x, spect_cut, label = ' Spect')
+            # plt.plot(new_x, spect, label = ' Spect')
+            # plt.plot(new_x, a_spect, label = ' Aligned')
             # # plt.plot(x, spur, label = 'spur')
             # plt.legend()
-            # plt.xlim(10, -1)
+            # plt.xlim(4,3)
             # plt.show()
-            #ALIGNED
-            a_integral = np.trapz(a_spect_cut, new_x)
-            a_spect = a_spect_cut/a_integral
+            # # print(conc_solution_row)
+            
+            # counter = 0
+            # for i in conc_solution_row :
+            #     if i != 0:
+            #         counter +=1
+            # if counter<8:
+            #     print(False)
+            # else:
+            #      print(True)
+            # print(counter)      
             
             return spect, conc_solution_row, a_spect
     
