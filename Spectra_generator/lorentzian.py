@@ -22,9 +22,6 @@ def loren(x,x0,gamma,area_n,conc, conc_ref):
     # return (conc*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2)))/t_area
     return ((conc/conc_ref)*(2*gamma*area_n)/(np.pi*((gamma**2)+4*(x-x0)**2))) #las con/con_ref se podrian hacer al final del met
 
-#define the x axis 
-# x = np.linspace(10, 0, 1000)
-
 #function to normalize and add variation to the widths 
 #Normalize the widths of the spectra
 def width_set(valor):
@@ -47,9 +44,12 @@ def gaussian(mu, sigma):
 
 def ranges(a):
     
-    a[: 5557] = 0
-    a[16107 : 16692] = 0
-    a[ 28031 :] = 0
+    # a[: 5557] = 0
+    # a[16107 : 16692] = 0
+    # a[ 28031 :] = 0
+    
+    
+    #a[24293:32652] = 0  #chemistry o el de 52_234
     
     return a
 

@@ -88,7 +88,7 @@ class Simulator:
         
     #Vary the width
     def set_width(self, width):
-        spectral_f = 500 #samples are taken at 500 MHz
+        spectral_f = 1 #500 #EN LOW FIELD NO HACE FALTA DIVIDIR POR LOS Hzs
 
         width_norm = width/spectral_f #scaled width by the reference 500 MHz  
         return width_norm*random.gauss(1, 0.04) #4% small variation to the width of the peak
@@ -97,7 +97,9 @@ class Simulator:
     def set_new_centre(self, clusters):
         
         id_ = 0
-        lista = []
+        
+        shift_dict = {}
+        
         for row in clusters:
             met_id = row[0]
             
@@ -113,16 +115,14 @@ class Simulator:
             shift = new_centre - clust_centre
             
             
-            if met_id == id_ :
-                pass
-                
+            if met_id in shift_dict :
+                shift_dict[met_id].append(shift)
             else:
-                id_ +=1
-                lista.append([id_])
-                
-            lista[id_ - 1].append(shift)   
+
+                shift_dict[met_id] = [shift]
+                  
             
-        return lista
+        return shift_dict
                 
          
         
@@ -135,7 +135,8 @@ class Simulator:
         # a[: 5557] = 0
         # a[16107 : 16692] = 0 #Dividir dos espectros?
         # a[ 28031 :] = 0
-        b = a[5557:28030] #Cutting zeros tails 
+        # b = a[5557:28030] #high field
+        b = a[20557:43679] #Cutting zeros tails low field, [-1, 10]
         # a[24293:32652] = 0
         return b
     
@@ -192,9 +193,9 @@ class Simulator:
             #Add the shift and the width variations and plot
             d = self.dictionary
             shifts = self.set_new_centre(self.clust_data)
-            start = -1.997
-            end = 12.024
-            points = 32_768
+            start = -10.79  #-1.997
+            end = 20.39  #12.024
+            points = 65536  #32_768
             x = np.linspace(start, end, points)
             # x = np.linspace(0.04, 10, 52_234)
             raw_spect = 0
@@ -209,29 +210,33 @@ class Simulator:
                 conc_solution_row[m -1] = wished
                 
                 con_reference = self.met_data[m-1][5]
-                
-                for key, value in d[m].items():
-
-                    for row in value:
+                # print(m)
+                if m in d:
+                    for key, value in d[m].items():
                         
-                        centre = row[4]
-                        shift = shifts[m-1][key]
-                        new_centre = row[4] + shift
-
-
-                        #Change width to ppm and add variation
-                        width_var= self.set_width(row[5])
-
-                        x0= new_centre
-                        gamma = width_var
-                        area = row[6]
-                        conc = wished #wished concentration
-                        conc_ref = con_reference
-                        #call the lorentzian
-                        raw_spect += self.lorentzian(x,x0,gamma,area,conc, conc_ref)
-                        
-                        #ALIGNED
-                        alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
+                        for row in value:
+                            
+                            centre = row[4]
+                            shift = shifts[m][key-1]
+                            new_centre = row[4] + shift
+    
+    
+                            #Change width to ppm and add variation
+                            width_var= self.set_width(row[5])
+    
+                            x0= new_centre
+                            gamma = width_var
+                            area = row[6]
+                            if area < 0:
+                                print(row)
+                                print('MENORRRR')
+                            conc = wished #wished concentration
+                            conc_ref = con_reference
+                            #call the lorentzian
+                            raw_spect += self.lorentzian(x,x0,gamma,area,conc, conc_ref)
+                            
+                            #ALIGNED
+                            alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
             #Add noise           
             noise = np.random.normal(0, noise, len(raw_spect))
             spur = 0 #self.spurGen(start, end, points)
@@ -246,7 +251,7 @@ class Simulator:
             a_spect_cut = self.ranges(a_spect_noise)
             
             #Normalize to 1
-            new_x = np.linspace(0.3807, 9.9946, 22_473)
+            new_x = np.linspace(-1, 10, 23_122)
             integral = np.trapz(spect_cut, new_x)
             spect = spect_cut/integral
             
@@ -254,12 +259,12 @@ class Simulator:
             # plt.plot(new_x, spect)
             # plt.show()
             
-            plt.figure()
-            plt.plot(x, spect_noise, label = ' Spect')
-            plt.plot(x, spur, label = 'spur')
-            plt.legend()
-            plt.xlim(10, 0)
-            plt.show()
+            # plt.figure()
+            # plt.plot(new_x, spect_cut, label = ' Spect')
+            # # plt.plot(x, spur, label = 'spur')
+            # plt.legend()
+            # plt.xlim(10, -1)
+            # plt.show()
             #ALIGNED
             a_integral = np.trapz(a_spect_cut, new_x)
             a_spect = a_spect_cut/a_integral

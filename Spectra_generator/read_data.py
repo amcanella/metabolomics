@@ -17,15 +17,18 @@ from scipy import integrate
 import random
 import datetime
 import time
+import csv
 # from scipy.signal import find_peaks 
 
 # path = 'C:/txts/peaks_table.txt'
-path = 'C:/txts/Copia de Metabo_tables_10.xlsx'
+# path = 'C:/txts/Copia de Metabo_tables_10.xlsx'
+path = 'C:/txts/Metabo_tables_12.xlsx'
 # NO SE PUEDE COGER DE UN EXCEL CON AUTOGUARDADO!!
 # path = "C:/Users/Alonso/OneDrive - Fundacio Institut d'Investigacio en ciencies de la salut Germans Trias i Pujol/Escritorio/WORK/Copia de Metabo_tables_3.xlsx"
 
 #Read data from excel 
 #Use the excel file line to not load the excel everytime you read a sheet , TODO: ADD THIS TO MAIN 
+#We could just use csv reader since it returns and iterator, NA we need all the data anyway when doing all simulations
 xls = pd.ExcelFile(path)
 mets_x = pd.read_excel(xls, 'Mets', header=0)
 clust_x = pd.read_excel(xls, 'Clusters')
@@ -47,8 +50,8 @@ def cluster_data(met_id):#TODO: try to be consistent and name functions with the
         for row in clust_m:
             if len(row)>0 and row[0]==i: #length of the row is 9 elements, just preventive, use while
                 # width_n=lorentzian.norm(row[8]) #Commented until all values stored in excel #NORMALIZE the widths, it comes in MHzs
-                                #id of met, name, number of clusters, cluster number, reference concentration?in mets, centre of cluster, width of cluster, number of Hs?out, rango 0, rango 1
-                total_clusters.append([i, mets_m[i-1,1],  mets_m[i-1,4], row[1], mets_m[i-1,5], row[6], row[8], row[4], row[2],row[3]])
+                                #id of met, name, number of clusters, cluster number, reference concentration?in mets, centre of cluster, width of cluster, number of peaks, rango 0, rango 1
+                total_clusters.append([i, mets_m[i-1,1],  mets_m[i-1,4], row[1], mets_m[i-1,5], row[5], row[7], row[4], row[2],row[3]])
     
     return total_clusters 
 
@@ -69,11 +72,11 @@ def peaks_data(met_id):
                 
                 width_norm = width / 500 #quick check to see if all new width values are within the 10 % at least (i know it is 4 but might be some outties)
                 pc= width_norm*0.1 
-                print(f'{i} {width_norm:.6f}  {width_var:.8f}')
-                if  width_norm+pc >= width_var >= width_norm-pc:
-                    print('True')    
-                else:
-                    print('False')
+                #print(f'{i} {width_norm:.6f}  {width_var:.8f}')
+                #if  width_norm+pc >= width_var >= width_norm-pc:
+                    #print('True')    
+                #else:
+                    #print('False')
                     # raise ValueError('width variation out of range ')
                     
                 #2. NORMANILIZE area, not anymore, AREA AND CONCENTRATION GO DIFFERENT WAYS 
@@ -86,7 +89,7 @@ def peaks_data(met_id):
                 suma+=area_peak #sum the areas of the different peaks
                 
                 #id, name of met, cluster number,   peak number,  centre,   width normalized&var, area, width without variation 
-                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], width_var, area_peak, width_norm]) # mets_m[i-1,6] max conc in urine profiler
+                total_peaks.append([i, mets_m[i-1,1],row[1],row[2],row[3], row[4], width_var, area_peak, width_norm]) # mets_m[i-1,6] max conc in urine profiler
                 
         total_areas.append(suma) #append the sum (ONLY USED TO EASILY ADD IT TO THE mets, since it is mets data)
     return total_peaks,total_areas
@@ -150,7 +153,7 @@ def addShift(d):
         #New cluster centre
         new_centre = lorentzian.gaussian(clust_centre, sigma)
         shift = new_centre - clust_centre
-        print('\n The cluster',clust_number,'old centre',clust_centre,'new centre', new_centre, 'of difference',shift,'and a range', sigma,'\n')
+        #print('\n The cluster',clust_number,'old centre',clust_centre,'new centre', new_centre, 'of difference',shift,'and a range', sigma,'\n')
         
         for row_2 in d[met][clust_number]:
         
@@ -166,7 +169,7 @@ def addShift(d):
             new_peak = peak_centre + shift 
             row_2.append(new_peak) #creo que mas correcto seria hacer un for keys, values y appender en values, YA PROBE Y NO FUNCIONA SOL:DEEPCOPY
             #se puede simplificar como row_2[4]+= new_centre - clust_centre
-            print('The peak', row_2[3], 'had old peak', peak_centre,'a new peak', new_peak,'and a shift', shift)
+            #print('The peak', row_2[3], 'had old peak', peak_centre,'a new peak', new_peak,'and a shift', shift)
         # return new_groups_data 
     return d
 
@@ -218,28 +221,35 @@ def plot_compounds(dict_, iteration_number=1):
                 clust_number = row[2]
                 peak_number = row[3]
                 old_centree=row[4]
-                gamma=row[5]
-                area_r = row[6]
-                fix_width = row[7]
-                x0 = row[8] #new centre
+                amplitude = row[5]
+                gamma=row[6]
+                area_r = row[7]
+                fix_width = row[8]
+                x0 = row[9] #new centre
                         # i WAS DOING THIS TO PLOT AND SEE PROGRESS                 #THIS INDEED MAKES SENSE
                 #TODO: 1. SUM ALL THE PEAKS BY METS ONLY, NO NEED TO SEP CLUSTS, 2. MAKE MATRIX MULT TIMES CONCENT AT THE END
+                #Used for the validation 
+                #concentration_test = [7,1,1]
                 #met variables 
                 concentration_ref = mets_l[ccc][2]
                 total_area = mets_l[ccc][4]
-                concentration = mets_l[ccc][5] #TODO: add this wished concentration to the prompt input 
+                concentration = mets_l[ccc][5] #concentration_test[ccc] # #TODO: add this wished concentration to the prompt input 
                 conc_solution_row[id_met-1] = concentration #esto es parte del met, no del peak, osea que podria estar en el primer loop
                 
-                # x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
-                # x = np.linspace(0.04, 10, 32_768) #start, end, length variables 
-                x = np.linspace(-1.997, 12.024, 32_768) #start, end, length variables 
+                #x = np.linspace(-1, 11.016, 32768) #real spectra have a spectral width of 12.016 ppm centered in 5 and the n of samples 
+                #x = np.linspace(0.04, 10, 32_768) #start, end, length variables 
                 
+                x = np.linspace(-1.997, 12.024, 32_768) #POLITECNICA 
+                #x = np.linspace(0.04, 10, 55_496) #spectrum in chemistry department
+                # x = np.linspace(0.04, 10, 52_234)
 
                 shift2 = x0 - old_centree  #this is done to compare and check the shifts in every cluster
                 #Add the correction factor for the centre and Hs for every cluster 
                 if row[0]==idd and row[2]==clusterr:
                     
                     # Might work directly by writting in y, y+=?, no need of suma function?
+                    
+                    #HEIGHTTT NOWWW 
                     y = lorentzian.loren(x,x0,gamma,area_r,concentration, concentration_ref)
                     s = lorentzian.suma(s,y)
                     
@@ -254,7 +264,7 @@ def plot_compounds(dict_, iteration_number=1):
                     #     plt.plot(x,s, label=(name, row[2]))
                     
                     #New metabolite begins
-                    print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
+                    #print('\n','Your metabolite:', row[1], 'with cluster', row[2],'\n')
                     y = lorentzian.loren(x,x0,gamma, area_r, concentration,concentration_ref)
                     s=y
                     
@@ -264,8 +274,9 @@ def plot_compounds(dict_, iteration_number=1):
                     s_sol = y_sol
                     
                     c=1
-                    
-                print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a concentration of ',concentration)
+                    integral_peak = np.trapz(s,x)
+                    # print(f'the concentration of {name} is {concentration} and area is {area_r}')
+                #print('Peak',c,'with a centre of', x0, 'ppm, old centre of',old_centree,'ppm, shift of',shift2,' and a concentration of ',concentration)
                 idd=row[0]
                 clusterr=row[2] 
                 
@@ -273,7 +284,9 @@ def plot_compounds(dict_, iteration_number=1):
                 # plot_funct(x, y, name, clust_number, peak_number, idd) #Call the function to plot all peaks individually, 
                 #                                                         otherwise a mess if plot function at the end of all the loop  
             # plt.plot(x,s, label=(name, 'sum peaks',row[2]))#PLOT the sum of peaks/ each cluster
+            integral_s = np.trapz(s,x)
             ss = lorentzian.suma(ss, s)#suma de clusters within compound 
+            integral_ss = np.trapz(ss,x)
             ss_sol = lorentzian.suma(ss_sol, s_sol)#suma de clusters within compound 
         # plot_funct(x, ss, name, clust_number, peak_number, idd)
         # plt.plot(x,ss,'r',label=(name, 'suma'))#PLOT the sum of clusters
@@ -290,14 +303,14 @@ def plot_compounds(dict_, iteration_number=1):
         #CHECKPOINT 
         if  concentration+0.00015 >= integration_ss >= concentration-0.00015:
             zcheckpoint.append(['Function', name, 'True']) #I recycle the ccc to count each met 
-            print('True')
+            #print('True')
         indexes = str(list(new_dict.keys()))
         integration_values_sum += integration_values[-1]
         int_total_area += total_area * concentration / concentration_ref #the area of each met * the concentration of each met AND NOW DIVIDED BY REFERENCE SINCE I TOOK IT AWAY FROM THE AREA CALCULATION
     # TODO: ADD NOISE HERE, missing cadenas de proteinas later on 
     #TODO: make a noise function
     mu= 0 
-    sigma = 0.0001
+    sigma =  0.005  #0.0001
     
     noise = np.random.normal(mu, sigma, len(m))
     m_noise = m + noise
@@ -305,8 +318,9 @@ def plot_compounds(dict_, iteration_number=1):
     m1 = m/integration_values_sum #this is to prove that is  almost the same as int_total_area
     m2 = m/int_total_area
     m3 = m_noise/integration_m_noise #normalize function by dividing by integral of signal with noise
-    #m_sol_n = m_sol/int_total_area  #TOTALLY WORKS BUT MORE PRECISE WITH INTEGRAL 
-    m_sol_n = m_sol/np.trapz(m_sol, x) #normalize by dividing by integral 
+    #m_sol_n = m_sol/int_total_area  #TOTALLY WORKS BUT MORE PRECISE WITH INTEGRAL
+    m_sol_noise = m_sol + noise
+    m_sol_n = m_sol_noise/np.trapz(m_sol_noise, x) #normalize by dividing by integral 
     
     integration_total = np.trapz(m,x) #this is the same almost as int_total_area
     integration_total_2 = np.trapz(m1,x)
@@ -319,15 +333,11 @@ def plot_compounds(dict_, iteration_number=1):
     f_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     
     #APPLY THE ZERO RANGES TO THE SPECTRUM 
-    # m3[: 5557] = 0
-    # m3[16107 : 16692] = 0
-    # m3[ 28031 :] = 0
+
     m3 = lorentzian.ranges(m3) #CALL THE RANGES FX FOR 0 AREAS 
     m_sol_n = lorentzian.ranges(m_sol_n)
     
-    # m_sol_n[: 5557] = 0
-    # m_sol_n[16107 : 16692] = 0
-    # m_sol_n[ 28031 :] = 0
+
     
     # NORMALIZE THE CONCENTRATION VALUES 
     # conc_solution_row =  [ value / sum(conc_solution_row) for value in conc_solution_row]
@@ -336,36 +346,46 @@ def plot_compounds(dict_, iteration_number=1):
     # "yp = yp / s\n",
     
     
-    plt.plot(x,m_sol_n, 'b', label = ('REFERENCE')) 
-    plt.plot(x,m3, 'g', label = ('shift'))    
+    #plt.plot(x,m_sol_n, 'b', label = ('REFERENCE')) 
+    plt.plot(x,m3, 'b') #, label = ('shift'))    #SHIFT 
     # plt.plot(x,m1, 'r', label = ('ALL COMPOUNDS'))    
     # plt.plot(x,m2, 'b', label = ('ALL COMPOUNDS'))    
      
     plt.gca().invert_xaxis() # plt.xlim(12, -1)
     plt.xlabel('ppm')
-    plt.title(f'All mets {indexes} {f_datetime}')
-    plt.grid(True)
+    plt.title(f'{(input_met)}')
+    # plt.title(f'All mets {(input_met)} {f_datetime}')
+    plt.grid(False)
     plt.legend(loc='upper left') #'best', 'center right'
     plt.show()#A PLOT SHOW PER METABOLITE
 
     return m3, conc_solution_row, m_sol_n
 
- 
+def csv_gen(csv_name, points, matrix):
+     
+     titles =[f'V{i}' for i in range(0, points)]
+     with open(csv_name, 'w', newline='') as csvfile:
+         csv_writer=csv.writer(csvfile)
+         csv_writer.writerow(titles)
+         csv_writer.writerows(map(np.ndarray.tolist, matrix)) if isinstance(matrix[0], np.ndarray) else  csv_writer.writerows(matrix)#applying map function to iterable
 
 if __name__ == "__main__":
     
     start = time.perf_counter()
     
-    instances =  10
+    instances =  2
     result = [0]*instances
     conc_solution = [0]*instances
     m_alineado = [0]*instances
-  
+    
+    print('Preparing your simulations...')
     #TODO: Restructure, I would store all the values in a list and make a dict with all of them, no need to call them every time we run and the for loop woulg go lower then :D
-    for i in range(instances):   
-        #Change the indexes to the metabolites you would like to see plot 
-        #Create a rd function to select a number of mets and another to select which
-        input_met = [3,4,5] #TODO: add a input() to add mets or retrieve mets randomly from list? Naa... would be cool but we need to call this automatically
+       
+    #Change the indexes to the metabolites you would like to see plot 
+    #Create a rd function to select a number of mets and another to select which
+    #input_met = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    input_met = range(1,25) #TODO: add a input() to add mets or retrieve mets randomly from list? Naa... would be cool but we need to call this automatically
+    for i in range(instances): #NO QUE OTRA QUE DEJAR EL FOR AQUI POR AHORA (wished conc in mets_data)
         
         #Store the data from the matrixes in a variable
         cluster_l = cluster_data(input_met)#Collects the cluster info from the demanded mets into this list
@@ -374,29 +394,52 @@ if __name__ == "__main__":
         
         #TODO:variate the width of the peaks within a gaussians, there are different variations, some repeated 
         # less frequently than others, we gotta see this recurrency 
-
-         # Store the list in a dictionary 
+        
+        # Store the list in a dictionary 
         peaks_dict = saveInDict(peaks_l)
         peaks_dict_copy = deepcopy(peaks_dict) #A shallow copy should not affect since we are adding a new value, not modifying, but it seems to append it
         
-        # ---------------I THINK WE CAN START THE FOR LOOP FROM HERE 
         new_dict = addShift(peaks_dict_copy) #Llamar al copy, sino se produce el cambio en v 
         
         result[i], conc_solution[i], m_alineado[i]= plot_compounds(new_dict) #, iter_)
-        
+        if i == 500:
+            print(f'{i} still going')
+            
+        if i == instances/2:
+            print(i)
+            print('------------- \n We are halfway through, thank you for your patience...')
+            
+        if i == 12_000:
+            print('still going')
+            
+    #Validation 
+    # csv_gen( f'validation_simulation.csv', 55_496, result)
+    # csv_gen( f'validation_concentration.csv', 67, conc_solution)
+    
     #Current date and time
     current_datetime= datetime.datetime.now()
     f_datetime = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
     # folder_path = 'C:/Repos/Metabolomics/Spectra_generator/result_'+f_datetime+'/'
     
     # np.savetxt(f'input_{f_datetime}.txt', result, delimiter=' ')   
-    np.savetxt(f'x_{instances}.txt', result, delimiter=' ')   
+    n_mets = len(input_met)
+    # np.savetxt(f'x_{instances}_{n_mets}.txt', result, delimiter=' ')    #there should be a title here for this 
     
-    np.savetxt(f'y_met_{instances}.txt', conc_solution, delimiter=' ')   
-    np.savetxt(f'y_alineado_{instances}.txt', m_alineado, delimiter=' ')   
-        
+    # np.savetxt(f'y_met_{instances}_{n_mets}.txt', conc_solution, delimiter=' ')   
+    # np.savetxt(f'y_alineado_{instances}_{n_mets}.txt', m_alineado, delimiter=' ')   
     end = time.perf_counter()
     
     elapsed = end - start
+    print('------------- \n Done with creation...')
+    
+    #function to generate csvs
+    # csv_gen( f'validation_simulation.csv', 55_496, result)
+    # csv_gen( f'validation_concentration.csv', 67, conc_solution)
+    # csv_gen( f'x_{instances}_{n_mets}_52_234.csv', 52_234, result)
+    # csv_gen( f'y_met_{instances}_{n_mets}_52_234.csv', 67, conc_solution)
+    
+    print('------------- \n We are done!')
+        
+
     # ********__________-____________________________
 
