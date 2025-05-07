@@ -147,7 +147,7 @@ class Simulator:
              csv_writer.writerow(titles)
              csv_writer.writerows(map(np.ndarray.tolist, matrix)) if isinstance(matrix[0], np.ndarray) else  csv_writer.writerows(matrix)#applying map function to iterable
 
-    def spurGen(self,start, end, points):
+    def spur_gen(self,start, end, points):
     
         peaks = 0
         lor = 0
@@ -188,7 +188,7 @@ class Simulator:
         return lor
     
     
-    def constructor(self, mets, noise):
+    def constructor(self, mets, noise, spur_flag = 0):
             #Add the shift and the width variations and plot
             d = self.dictionary
             shifts = self.set_new_centre(self.clust_data)
@@ -198,7 +198,7 @@ class Simulator:
             x = np.linspace(start, end, points)
             # x = np.linspace(0.04, 10, 52_234)
             raw_spect = 0
-            conc_solution_row = [0]*len(self.met_data)
+            conc_solution_row = [0]*len(self.met_data) #COULD BE LEN mets but leave it as it is
             
             alig_spect = 0
             
@@ -234,16 +234,16 @@ class Simulator:
                         alig_spect += self.lorentzian(x,centre,gamma,area,conc, conc_ref)
             #Add noise           
             noise = np.random.normal(0, noise, len(raw_spect))
-            spur = 0 #self.spurGen(start, end, points)
+            spur = self.spur_gen(start, end, points) if spur_flag == 1 else np.zeros(points)
             
             spect_noise = raw_spect + noise + spur
             
             a_spect_noise = alig_spect + noise + spur
                         
             #Add the zero areas or cut
-            spect_cut = self.ranges(spect_noise)
+            spect_cut = self.ranges(spect_noise) 
             
-            a_spect_cut = self.ranges(a_spect_noise)
+            a_spect_cut = self.ranges(a_spect_noise) #aligned spectrum
             
             #Normalize to 1
             new_x = np.linspace(0.3807, 9.9946, 22_473)
@@ -264,5 +264,5 @@ class Simulator:
             a_integral = np.trapz(a_spect_cut, new_x)
             a_spect = a_spect_cut/a_integral
             
-            return spect, conc_solution_row, a_spect
+            return spect, conc_solution_row, a_spect, spur
     

@@ -16,12 +16,13 @@ s = Simulator(dictionary = d, met_data=p.met_data, clust_data = p.clust_data, cl
 print(f'this is a test {p.met_data[0][6]}')
 
 NFREQ = 22_473 #ZEROS REMOVED 32_768 #52_234 #32768
-SAMPLES = 1
+SAMPLES = 1 #Normally batches of 10k samples that weigh around 4 GB
 #NO UREA
 mets = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,61,62,63,65,66,67] #np.arange(1,26) #[3,4,5]
 # mets = [3,4,5]
 nmet = len(mets)
 noise = 0.0001
+spur_flag = 1  # 0 = no spur; 1 = include spurious peaks to add noise
 
 for j in range(10,11):
     
@@ -29,14 +30,15 @@ for j in range(10,11):
     spectrum = [0]*SAMPLES
     conc = [0]*SAMPLES
     aligned = [0]*SAMPLES
+    spur = [0]*SAMPLES
     
     start = time.perf_counter()
     for i in range(SAMPLES):
     
-        if i == SAMPLES/2:
+        if i == SAMPLES/2 or i==SAMPLES/4 :
             print(f'\n {i} We are half way through!')
           
-        spectrum[i], conc[i], aligned[i] = s.constructor(mets, noise)  #, aligned[i]
+        spectrum[i], conc[i], aligned[i], spur[i] = s.constructor(mets, noise, spur_flag = spur_flag)  #, aligned[i]
         
     end =  time.perf_counter()
     timer = (end - start )/60
