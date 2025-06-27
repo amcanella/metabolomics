@@ -1,5 +1,9 @@
 # Metabolomics
-1H NMR spectra simulation based on official databases. 
+Python-based tool for 1H NMR spectra simulation based on official databases. 
 
-- By inputting a xlsx or csv file with names, peak parameters and concentrations of metabolites, user can replicate any spectra in low and high field NMRs.
-- The script is currently prepared for urine samples as the centre of the peaks will shift.
+## Features
+- User must input .xlsx or .csv files containing metabolite names, peak parameters, and concentrations.
+
+- Generates realistic low- and high-field NMR spectra for each sample.
+
+- Optimized for urine samples, taking into account pH-dependent chemical shift variations.

@@ -9,7 +9,7 @@ from simulator import process_data
 from simulator import Simulator
 import time 
 
-p = process_data('C:/txts/Metabo_tables_14.xlsx')
+p = process_data('C:/txts/Metabo_tables_14.xlsx') #INPUT YOUR DATABASE PATH, template of database will be provided in the future
 d = p.create_dict()
 s = Simulator(dictionary = d, met_data=p.met_data, clust_data = p.clust_data, clust_dict=p.clust_dict())
 
